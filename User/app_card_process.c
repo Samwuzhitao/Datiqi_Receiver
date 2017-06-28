@@ -474,11 +474,11 @@ void App_card_process(void)
 					wl.is_printf_clear_uid = 0;
 					memset(str,0,20);
 					sprintf(str, "%010u" , *(uint32_t *)( wl.clear_uid));
-					b_print("  \"replace_uid\": \"%d\"\r\n",str);
+					b_print("  \"replace_uid\": \"%d\",\r\n",str);
 				}
 				else
 				{
-					b_print("  \"replace_uid\": \"\"\r\n");
+					b_print("  \"replace_uid\": \"\",\r\n");
 				}
 				
 				memset(str,0,21);
@@ -494,7 +494,7 @@ void App_card_process(void)
 							sprintf(p_student_data+2*i+1,"%d" ,temp_data);
 					}
 				}
-				b_print("  \"student_id\": \"%s\",\r\n", str );
+				b_print("  \"student_id\": \"%s\"\r\n", str );
 				b_print("}\r\n");
 			}
 			else
