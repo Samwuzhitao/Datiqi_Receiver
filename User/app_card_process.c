@@ -118,6 +118,8 @@ void App_card_process(void)
 			else
 			{	
 				g_uid_len = 4;
+				wtrte_flash_ok = 1;
+				rf_set_card_status(3);
 			}
 			DEBUG_CARD_DEBUG_LOG("uid len = %d\r\n",g_uid_len);
 		}
@@ -509,16 +511,16 @@ void App_card_process(void)
 //			b_print("  \"HEX\": \"%02X%02X%02X%02X\",\r\n",
 //			wl.uids[write_uid_pos].uid[0],wl.uids[write_uid_pos].uid[1],
 //			wl.uids[write_uid_pos].uid[2],wl.uids[write_uid_pos].uid[3]);
-				sprintf(str, "%010u" , *(uint32_t *)( wl.uids[write_uid_pos].uid));
-				b_print("  \"card_id\": \"%s\",\r\n",str);
-				if( wl.is_printf_clear_uid == 1 )
+				if(g_uid_len == 8)
 				{
-					wl.is_printf_clear_uid = 0;
-					b_print("  \"replace_uid\": \"%010u\"\r\n",*(uint32_t *)( wl.clear_uid));
-					memset(wl.clear_uid,0x00,4);
+					sprintf(str, "%010u" , *(uint32_t *)(g_cSNR + 4));
+					b_print("  \"card_id\": \"%s\",\r\n",str);
+					b_print("  \"replace_uid\": \"\"\r\n");
 				}
-				else
+				if(g_uid_len == 4)
 				{
+					sprintf(str, "%010u" , *(uint32_t *)( g_cSNR));
+					b_print("  \"card_id\": \"%s\",\r\n",str);
 					b_print("  \"replace_uid\": \"\"\r\n");
 				}
 //			memset(str,0,20);
