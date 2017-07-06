@@ -58,6 +58,7 @@ void App_card_match_single( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *
 void App_card_match( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage );
 void App_start_or_stop_answer( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage );
 void App_setting_24g_attendence( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage );
+void App_check_24g_attendence( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage );
 void App_bootloader_attendence( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage );
 
 /******************************************************************************
@@ -364,6 +365,22 @@ static void serial_cmd_process(void)
 					else
 					{
 						App_setting_24g_attendence( &ReviceMessage, &SendMessage);
+						serial_cmd_status = APP_SERIAL_CMD_STATUS_IDLE;
+					}
+				}
+				break;
+		
+			case 0x44:
+				{
+					if(ReviceMessage.LEN != 0)
+					{
+						err_cmd_type = serial_cmd_type;
+						serial_cmd_type = APP_CTR_DATALEN_ERR;
+						serial_cmd_status = APP_SERIAL_CMD_STATUS_ERR;
+					}
+					else
+					{
+						App_check_24g_attendence( &ReviceMessage, &SendMessage);
 						serial_cmd_status = APP_SERIAL_CMD_STATUS_IDLE;
 					}
 				}
@@ -980,7 +997,23 @@ void App_return_device_info( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef 
 	{
 			*( pdata + ( j++ ) )=(company[i]<<4)|(company[i+1]);
 	}
-	
+
+	SMessage->LEN = j;
+	SMessage->XOR = XOR_Cal((uint8_t *)(&(SMessage->TYPE)), j+6);
+	SMessage->END = 0xCA;
+}
+
+void App_check_24g_attendence( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage )
+{
+	uint8_t temp_count = 0,i = 0,j=0;
+	uint8_t *pdata = (uint8_t *)(SMessage->DATA);
+
+	SMessage->HEADER = 0x5C;
+
+	SMessage->TYPE = RMessage->TYPE;
+
+	memcpy(SMessage->SIGN, RMessage->SIGN, 4);
+
 	if( clicker_set.N_24G_ATTEND & 0x80 )
 	{
 		*( pdata + ( j++ ) ) = 0x01;
