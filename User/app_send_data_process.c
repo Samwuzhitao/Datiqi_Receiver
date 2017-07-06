@@ -337,14 +337,48 @@ static void update_data_to_buffer( uint8_t *Message )
 			b_print("  ]\r\n");
 			b_print("}\r\n");
 
-			if( Cmdtype == 0x24 )
-			{
-				
-			}
-
 			/* 更新接收数据帧号与包号 */
 			wl.uids[uidpos].rev_seq = Message[11];
 			wl.uids[uidpos].rev_num = Message[12];	
+		}
+		return;
+	}
+
+	if( Cmdtype == 0x40 )
+	{
+		if(Message[12] != wl.uids[uidpos].rev_num)//收到的是有效数据
+		{
+			if((prdata[4] == 0x55) && (prdata[5] == 0x66))
+			{
+				uint16_t write_uid_pos    = 0xFFFF;
+				uint8_t is_white_list_uid = 0;
+				is_white_list_uid = add_uid_to_white_list(prdata,&write_uid_pos);
+
+				if(is_white_list_uid != OPERATION_ERR)
+				{
+					char str[20];
+					b_print("{\r\n");
+					b_print("  \"fun\": \"update_card_info\",\r\n");
+					memset(str,0,20);
+					sprintf(str, "%010u" , *(uint32_t *)( prdata));
+					b_print("  \"card_id\": \"%s\",\r\n",str);
+					if( wl.is_printf_clear_uid == 1 )
+					{
+						wl.is_printf_clear_uid = 0;
+						b_print("  \"replace_uid\": \"%010u\"\r\n",*(uint32_t *)( wl.clear_uid));
+						memset(wl.clear_uid,0x00,4);
+					}
+					else
+					{
+						b_print("  \"replace_uid\": \"\"\r\n");
+					}
+					b_print("}\r\n");
+				}
+			}
+					/* 更新接收数据帧号与包号 */
+			wl.uids[uidpos].rev_seq = Message[11];
+			wl.uids[uidpos].rev_num = Message[12];
+			return;
 		}
 	}
 }
@@ -381,11 +415,14 @@ void spi_process_revice_data( void )
 	}
 	#endif
 
-	/* 检索白名单 */
-	Is_whitelist_uid = search_uid_in_white_list(spi_message+5,&uidpos);
+	if(rf_var.cmd != 0x40)
+	{
+		/* 检索白名单 */
+		Is_whitelist_uid = search_uid_in_white_list(spi_message+5,&uidpos);
 
-	if(Is_whitelist_uid != OPERATION_SUCCESS)
-		return;
+		if(Is_whitelist_uid != OPERATION_SUCCESS)
+			return;
+	}
 
 	/* 收到的是Data */
 	if(spi_message_type == NRF_DATA_IS_USEFUL) 
