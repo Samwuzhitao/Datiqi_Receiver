@@ -40,8 +40,7 @@ extern task_tcb_typedef card_task;
 
 const static serial_cmd_typedef cmd_list[] = {
 {"clear_wl",       sizeof("clear_wl"),       serial_cmd_clear_uid_list},
-//{"bind",           sizeof("bind")-1,         serial_cmd_bind_operation},
-{"bind",           sizeof("bind")-1,         serial_cmd_bind_wireless },
+{"bind",           sizeof("bind")-1,         serial_cmd_bind          },
 {"answer_stop",    sizeof("answer_stop"),    serial_cmd_answer_stop   },
 {"get_device_info",sizeof("get_device_info"),serial_cmd_get_device_no },
 {"set_channel",    sizeof("set_channel"),    serial_cmd_set_channel   },
@@ -257,21 +256,15 @@ void serial_cmd_clear_uid_list(const cJSON *object)
 
 void serial_cmd_bind_operation(const cJSON *object)
 {
-	uint8_t card_status = 0;
 	char *p_cmd_str = cJSON_GetObjectItem(object, "fun")->valuestring;
-	
-	card_status = rf_get_card_status();
-	b_print("{\r\n");
 
+	b_print("{\r\n");
 	if(strncmp( p_cmd_str, "bind_start", 10) == 0)
 	{
 		wl.match_status = ON;
 		rf_set_card_status(1);
 		b_print("  \"fun\": \"bind_start\",\r\n");
-		if( card_status == 0 )
-			b_print("  \"result\": \"0\"\r\n");
-		else
-			b_print("  \"result\": \"-1\"\r\n");
+		b_print("  \"result\": \"0\"\r\n");
 	}
 
 	if(strncmp( p_cmd_str, "bind_stop", 9 ) == 0)
@@ -1038,7 +1031,7 @@ void serial_cmd_import_config(char *pdata_str)
 				case IMPORT_STATUS_ATT:
 				{
 					uint8_t pro_index = atoi(value_str);
-					if(( pro_index >= 0) && ( pro_index <= 12))
+					if( pro_index <= 12 )
 					{
 						clicker_set.N_24G_ATTEND = pro_index | 0x80;
 						EE_WriteVariable( CPU_24G_ATTENDANCE_OF_FEE , clicker_set.N_24G_ATTEND );
@@ -1216,13 +1209,10 @@ void serial_cmd_bind_wireless(const cJSON *object)
 {
 	char *p_cmd_str = cJSON_GetObjectItem(object, "fun")->valuestring;
 
-	b_print("{\r\n");
-
 	if(strncmp( p_cmd_str, "bind_start", 10) == 0)
 	{
 		uint8_t sdata_index = 0;
 		uint8_t *pSdata;
-
 		/* 准备发送数据 */
 		pSdata = (uint8_t *)rf_var.tx_buf+1;
 		memcpy(pSdata,revicer.uid,4);
@@ -1235,28 +1225,25 @@ void serial_cmd_bind_wireless(const cJSON *object)
 		/* 发送数据 */
 		{
 			nrf_transmit_parameter_t transmit_config;
-
 			/* 准备发送数据管理块 */
 			memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
 			memset(nrf_data.dtq_uid,    0x00, 4);
 			memset(transmit_config.dist,0x00, 4);
 			send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
 			send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
-
 			/* 启动发送数据状态机 */
 			set_send_data_status( SEND_500MS_DATA_STATUS );
 		}
-		b_print("  \"fun\": \"bind_start\",\r\n");
-		b_print("  \"result\": \"0\"\r\n");
 	}
 
 	if(strncmp( p_cmd_str, "bind_stop", 9 ) == 0)
-	{
 		set_send_data_status( 0 );
-		b_print("  \"fun\": \"bind_stop\",\r\n");
-		b_print("  \"result\": \"0\"\r\n");
-	}
-	b_print("}\r\n");
+}
+
+void serial_cmd_bind(const cJSON *object)
+{
+	serial_cmd_bind_operation( object );
+	serial_cmd_bind_wireless(  object );
 }
 
 /**************************************END OF FILE****************************/

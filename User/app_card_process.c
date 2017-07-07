@@ -118,6 +118,10 @@ void App_card_process(void)
 			else
 			{	
 				g_uid_len = 4;
+				card_message_err = 1;
+				wtrte_flash_ok = 1;
+				rf_set_card_status(3);
+				return;
 			}
 			DEBUG_CARD_DEBUG_LOG("uid len = %d\r\n",g_uid_len);
 		}
@@ -430,23 +434,26 @@ void App_card_process(void)
 		{
 			if( card_message_err != 2 )
 			{
-				uint8_t status;
-				status = SendInterrupt();
-				DEBUG_CARD_DEBUG_LOG("SendInterrupt status = %d\r\n",status);
-				#ifdef SHOW_CARD_PROCESS_TIME
-				EndTime = PowerOnTime - StartTime;
-				printf("UseTime:SendInterrupt = %d \r\n",EndTime);
-				#endif
-				if( status != MI_OK )
+				if( g_uid_len == 8 )
 				{
-					uint8_t *rpdata = (uint8_t *)&rID;
-					uint8_t *wpdata = (uint8_t *)&wID;
-					uint8_t card_data_len = sizeof(rf_id_typedf);
-					memset(rpdata,0x00,card_data_len);
-					memset(wpdata,0x00,card_data_len);
-					mfrc500_init();
-					rf_set_card_status(1);
-					return;
+					uint8_t status;
+					status = SendInterrupt();
+					DEBUG_CARD_DEBUG_LOG("SendInterrupt status = %d\r\n",status);
+					#ifdef SHOW_CARD_PROCESS_TIME
+					EndTime = PowerOnTime - StartTime;
+					printf("UseTime:SendInterrupt = %d \r\n",EndTime);
+					#endif
+					if( status != MI_OK )
+					{
+						uint8_t *rpdata = (uint8_t *)&rID;
+						uint8_t *wpdata = (uint8_t *)&wID;
+						uint8_t card_data_len = sizeof(rf_id_typedf);
+						memset(rpdata,0x00,card_data_len);
+						memset(wpdata,0x00,card_data_len);
+						mfrc500_init();
+						rf_set_card_status(1);
+						return;
+					}
 				}
 				#ifdef OPEN_SILENT_MODE
 				ledOn(LBLUE);
@@ -480,7 +487,7 @@ void App_card_process(void)
 				{
 					b_print("  \"replace_uid\": \"\",\r\n");
 				}
-				
+
 				memset(str,0,21);
 				{
 					uint8_t i, temp_data;
@@ -520,16 +527,24 @@ void App_card_process(void)
 //			b_print("  \"HEX\": \"%02X%02X%02X%02X\",\r\n",
 //			wl.uids[write_uid_pos].uid[0],wl.uids[write_uid_pos].uid[1],
 //			wl.uids[write_uid_pos].uid[2],wl.uids[write_uid_pos].uid[3]);
-				sprintf(str, "%010u" , *(uint32_t *)( wl.uids[write_uid_pos].uid));
-				b_print("  \"card_id\": \"%s\",\r\n",str);
-				if( wl.is_printf_clear_uid == 1 )
+				if( g_uid_len == 8 )
 				{
-					wl.is_printf_clear_uid = 0;
-					b_print("  \"replace_uid\": \"%010u\"\r\n",*(uint32_t *)( wl.clear_uid));
-					memset(wl.clear_uid,0x00,4);
+					b_print("  \"card_id\": \"%010u\",\r\n",*(uint32_t *)( wl.uids[write_uid_pos].uid));
+					if( wl.is_printf_clear_uid == 1 )
+					{
+						wl.is_printf_clear_uid = 0;
+						b_print("  \"replace_uid\": \"%010u\"\r\n",*(uint32_t *)( wl.clear_uid));
+						memset(wl.clear_uid,0x00,4);
+					}
+					else
+					{
+						b_print("  \"replace_uid\": \"\"\r\n");
+					}
 				}
-				else
+				if( g_uid_len == 4 )
 				{
+					b_print("  \"card_type\": \"M1\",\r\n");
+					b_print("  \"card_id\": \"%010u\",\r\n",*(uint32_t *)( g_cSNR ));
 					b_print("  \"replace_uid\": \"\"\r\n");
 				}
 //			memset(str,0,20);
