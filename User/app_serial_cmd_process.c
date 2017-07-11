@@ -1037,7 +1037,7 @@ void serial_cmd_import_config(char *pdata_str)
 				case IMPORT_STATUS_ATT:
 				{
 					uint8_t pro_index = atoi(value_str);
-					if(( pro_index >= 0) && ( pro_index <= 12))
+					if( pro_index <= 12)
 					{
 						clicker_set.N_24G_ATTEND = pro_index | 0x80;
 						EE_WriteVariable( CPU_24G_ATTENDANCE_OF_FEE , clicker_set.N_24G_ATTEND );
@@ -1179,6 +1179,7 @@ void serial_cmd_self_inspection(const cJSON *object)
 {
 	uint8_t sdata_index = 0;
 	uint8_t *pSdata;
+	uint8_t rf_status = 0;
 
 	/* 准备发送数据 */
 	pSdata = (uint8_t *)rf_var.tx_buf;
@@ -1204,9 +1205,18 @@ void serial_cmd_self_inspection(const cJSON *object)
 		set_send_data_status( SEND_500MS_DATA_STATUS );
 		dtq_self_inspection_flg = 1;
 	}
+	
+	rf_status = clicker_config_default_set();
 
 	b_print("{\r\n");
 	b_print("  \"fun\": \"dtq_self_inspection\",\r\n");
+	switch(rf_status)
+	{
+		case 0: b_print("  \"tx_rx_check\": \"OK\",\r\n"); break;
+		case 1: b_print("  \"tx_rx_check\": \"DEVICE ERROR\",\r\n"); break;
+		case 2: b_print("  \"tx_rx_check\": \"FIRMWARE ERROR\",\r\n"); break;
+		default: break;
+	}
 	b_print("  \"result\": \"0\"\r\n");
 	b_print("}\r\n");
 }

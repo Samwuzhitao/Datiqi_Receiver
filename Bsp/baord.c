@@ -458,7 +458,7 @@ uint8_t spi_set_cpu_rx_signal_ch( uint8_t rx_ch )
 	/* ???? */
 	spi_cmd_w.header   = 0x86;
 	spi_cmd_w.cmd      = 0x20;
-	spi_cmd_w.channel  = rx_ch;
+	spi_cmd_w.channel  = rx_ch | 0x80;
 	spi_cmd_w.data_xor = XOR_Cal((uint8_t *)&(spi_cmd_w.cmd), 2);
 	spi_cmd_w.end      = 0x76;
 
@@ -490,6 +490,11 @@ uint8_t spi_set_cpu_rx_signal_ch( uint8_t rx_ch )
 		NRF1_CSN_HIGH();
 		if( spi_cmd_r.cmd == 0x21 )
 		{
+			if((spi_cmd_r.channel & 0x80) != 0x80)
+			{
+				return 0x02;
+			}
+			
 			if( spi_cmd_w.channel == spi_cmd_r.channel )
 			{
 				status = 0;
@@ -526,7 +531,7 @@ uint8_t spi_set_cpu_tx_signal_ch( uint8_t tx_ch )
 
 	spi_cmd_w.header   = 0x86;
 	spi_cmd_w.cmd      = 0x20;
-	spi_cmd_w.channel  = tx_ch;
+	spi_cmd_w.channel  = tx_ch & 0x7F;
 	spi_cmd_w.data_xor = XOR_Cal((uint8_t *)&(spi_cmd_w.cmd), 2);
 	spi_cmd_w.end      = 0x76;
 
@@ -559,6 +564,11 @@ uint8_t spi_set_cpu_tx_signal_ch( uint8_t tx_ch )
 		
 	  if( spi_cmd_r.cmd == 0x21 )
 		{
+			if((spi_cmd_r.channel & 0x80) != 0x00)
+			{
+				return 0x02;
+			}
+			
 			if( spi_cmd_w.channel == spi_cmd_r.channel )
 			{
 				status = 0;
