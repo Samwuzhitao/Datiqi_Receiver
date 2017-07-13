@@ -543,7 +543,7 @@ void nrf_transmit_start( nrf_transmit_parameter_t *t_conf)
 	nrf_data.tbuf[i++]  = 0x61;
 	memcpy((nrf_data.tbuf + i), t_conf->dist, 4);
 	i = i + 4;
-	if(rf_var.cmd == 0x40)
+	if((rf_var.cmd == 0x40) || (rf_var.cmd == 0x41))
 		memset((nrf_data.tbuf + i), 0, 4);
 	else
 		memcpy((nrf_data.tbuf + i), nrf_data.jsq_uid, 4);

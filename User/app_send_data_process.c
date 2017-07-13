@@ -16,6 +16,7 @@ extern uint16_t list_tcb_table[UID_LIST_TABLE_SUM][WHITE_TABLE_LEN];
 
 extern wl_typedef      wl;
 extern revicer_typedef revicer;
+extern uint8_t pin_key[2];
 
 void retransmit_env_init( void );
 
@@ -348,7 +349,7 @@ static void update_data_to_buffer( uint8_t *Message )
 	{
 		if(Message[12] != wl.uids[uidpos].rev_num)//收到的是有效数据
 		{
-			if((prdata[4] == 0x55) && (prdata[5] == 0x66))
+			if((prdata[4] == pin_key[0]) && (prdata[5] == pin_key[1]))
 			{
 				uint16_t write_uid_pos    = 0xFFFF;
 				uint8_t is_white_list_uid = 0;
