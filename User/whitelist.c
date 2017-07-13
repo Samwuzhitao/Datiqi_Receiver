@@ -172,9 +172,8 @@ void get_white_list_from_flash(void)
 	wl.switch_status = switch_status;
 	
 	/* get clone addr flag */
-	EE_ReadVariable(CPU_ADDR_CLONE_FLAG,&addr_clone_flag);
-	revicer.addr_clone_flag = addr_clone_flag;
-
+	//EE_ReadVariable(CPU_ADDR_CLONE_FLAG,&addr_clone_flag);
+	revicer.addr_clone_flag = 0;
   /* get clone addr */
 	if(revicer.addr_clone_flag == 1)
 	{
@@ -184,7 +183,6 @@ void get_white_list_from_flash(void)
 			revicer.uid[i] = (uint8_t)(tmpuid[i]&0xFF);
 		}
 	}
-	
 	wl.start = ON;
 }
 
