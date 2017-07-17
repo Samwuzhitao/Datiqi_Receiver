@@ -118,10 +118,6 @@ void App_card_process(void)
 			else
 			{	
 				g_uid_len = 4;
-				card_message_err = 1;
-				wtrte_flash_ok = 1;
-				rf_set_card_status(3);
-				return;
 			}
 			DEBUG_CARD_DEBUG_LOG("uid len = %d\r\n",g_uid_len);
 		}
@@ -167,6 +163,12 @@ void App_card_process(void)
 				{
 					return;
 				}
+			}
+			if(g_uid_len == 4)
+			{
+				wtrte_flash_ok = 1;
+				rf_set_card_status(3);
+				card_message_err = 1;
 			}
 		}
 		else
