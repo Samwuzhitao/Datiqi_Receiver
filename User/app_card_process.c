@@ -120,6 +120,7 @@ void App_card_process(void)
 				g_uid_len = 4;
 				wtrte_flash_ok = 1;
 				rf_set_card_status(3);
+				card_message_err = 1;
 			}
 			DEBUG_CARD_DEBUG_LOG("uid len = %d\r\n",g_uid_len);
 		}
