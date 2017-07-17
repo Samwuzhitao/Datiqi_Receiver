@@ -1219,10 +1219,12 @@ void serial_cmd_bind_wireless(const cJSON *object)
 		if(rf_get_card_status() == 0)
 		{
 			uint8_t temp = 0;
-			srand((system_rtc_timer.hour+1)*(system_rtc_timer.min+1)*(system_rtc_timer.sec+1));
-			temp = rand() % 100;//0x55;
+//		srand((system_rtc_timer.hour+1)*(system_rtc_timer.min+1)*(system_rtc_timer.sec+1));
+//		temp = rand() % 100;//0x55;
+			temp = (*(uint32_t *)(revicer.uid) % 10000)/100;
 			pin_key[0] = (temp / 10)*16 + temp % 10;
-			temp = rand() % 100;//0x66;
+//		temp = rand() % 100;//0x66;
+			temp = *(uint32_t *)(revicer.uid) % 100;
 			pin_key[1] = (temp / 10)*16 + temp % 10;
 		}
 
