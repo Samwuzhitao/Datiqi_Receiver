@@ -132,7 +132,7 @@ void Parse_time_to_str( char *str )
 	pdata = pdata + 3;
 }
 
-static void update_data_to_buffer( uint8_t *Message )
+static int8_t update_data_to_buffer( uint8_t *Message )
 {
 	typedef struct
 	{
@@ -158,24 +158,19 @@ static void update_data_to_buffer( uint8_t *Message )
 	prdata      = Message+14+AckTableLen+2+2;
 
 	if( DataLen == 0 )
-		return;
+		return -1;
 
 	if((( Cmdtype == 0x10 )||( Cmdtype == 0x24 )) && ( wl.start == ON ))
 	{
 		uint8_t Is_whitelist_uid = search_uid_in_white_list(Message+5,&uidpos);
 		if(Message[12] != wl.uids[uidpos].rev_num)//收到的是有效数据
 		{
-			char str[20];
 			uint8_t ClickerAnswerTime[CLICKER_TIMER_STR_LEN];
-			
+
 			b_print("{\r\n");
 			b_print("  \"fun\": \"update_answer_list\",\r\n");
-			memset(str,0,20);
-			sprintf(str, "%010u" , *(uint32_t *)( wl.uids[uidpos].uid));
-			b_print("  \"card_id\": \"%s\",\r\n", str );
-			memset(str,0,20);
-			sprintf(str, "%d" , ( wl.uids[uidpos].rssi));
-			b_print("  \"rssi\": \"-%s\",\r\n", str );
+			b_print("  \"card_id\": \"%010u\",\r\n", *(uint32_t *)( wl.uids[uidpos].uid));
+			b_print("  \"rssi\": \"-%d\",\r\n", ( wl.uids[uidpos].rssi));
 			memset(ClickerAnswerTime,0x00,CLICKER_TIMER_STR_LEN);
 			Parse_time_to_str((char *)ClickerAnswerTime);
 			b_print("  \"update_time\": \"%s\",\r\n",(char *) ClickerAnswerTime );
@@ -342,46 +337,36 @@ static void update_data_to_buffer( uint8_t *Message )
 			wl.uids[uidpos].rev_seq = Message[11];
 			wl.uids[uidpos].rev_num = Message[12];	
 		}
-		return;
+		return 0;
 	}
 
 	if( Cmdtype == 0x40 )
 	{
-		if(Message[12] != wl.uids[uidpos].rev_num)//收到的是有效数据
+		if((prdata[4] == pin_key[0]) && (prdata[5] == pin_key[1]))
 		{
-			if((prdata[4] == pin_key[0]) && (prdata[5] == pin_key[1]))
-			{
-				uint16_t write_uid_pos    = 0xFFFF;
-				uint8_t is_white_list_uid = 0;
-				is_white_list_uid = add_uid_to_white_list(prdata,&write_uid_pos);
+			uint16_t write_uid_pos    = 0xFFFF;
+			uint8_t is_white_list_uid = 0;
+			is_white_list_uid = add_uid_to_white_list(prdata,&write_uid_pos);
 
-				if(is_white_list_uid != OPERATION_ERR)
+			if(is_white_list_uid != OPERATION_ERR)
+			{
+				b_print("{\r\n");
+				b_print("  \"fun\": \"update_card_info\",\r\n");
+				b_print("  \"card_id\": \"%010u\",\r\n",*(uint32_t *)( prdata));
+				if( wl.is_printf_clear_uid == 1 )
 				{
-					char str[20];
-					b_print("{\r\n");
-					b_print("  \"fun\": \"update_card_info\",\r\n");
-					memset(str,0,20);
-					sprintf(str, "%010u" , *(uint32_t *)( prdata));
-					b_print("  \"card_id\": \"%s\",\r\n",str);
-					if( wl.is_printf_clear_uid == 1 )
-					{
-						wl.is_printf_clear_uid = 0;
-						b_print("  \"replace_uid\": \"%010u\"\r\n",*(uint32_t *)( wl.clear_uid));
-						memset(wl.clear_uid,0x00,4);
-					}
-					else
-					{
-						b_print("  \"replace_uid\": \"\"\r\n");
-					}
-					b_print("}\r\n");
+					wl.is_printf_clear_uid = 0;
+					b_print("  \"replace_uid\": \"%010u\"\r\n",*(uint32_t *)( wl.clear_uid));
+					memset(wl.clear_uid,0x00,4);
 				}
+				else
+					b_print("  \"replace_uid\": \"\"\r\n");
+				b_print("}\r\n");
 			}
-					/* 更新接收数据帧号与包号 */
-			wl.uids[uidpos].rev_seq = Message[11];
-			wl.uids[uidpos].rev_num = Message[12];
-			return;
 		}
+		return 0;
 	}
+	return 0;
 }
 
 /******************************************************************************
@@ -435,19 +420,37 @@ void spi_process_revice_data( void )
 
 		if( wl.start == ON )
 		{
-			nrf_transmit_parameter_t transmit_config;
-			/* 回复ACK */
-			memcpy(transmit_config.dist,spi_message+5, 4 );
-			transmit_config.package_type   = NRF_DATA_IS_ACK;
-			transmit_config.transmit_count = 2;
-			transmit_config.delay100us     = 20;
-			transmit_config.is_pac_add     = PACKAGE_NUM_SAM;
-			transmit_config.data_buf       = NULL;
-			transmit_config.data_len       = 0;
-			nrf_transmit_start( &transmit_config );
-
 			/* 有效数据告到PC */
-			update_data_to_buffer( spi_message );
+			int8_t result = update_data_to_buffer( spi_message );
+
+			if(result == 0)
+			{
+				uint8_t  Cmdtype;
+				uint16_t AckTableLen,DataLen;
+				uint8_t  *prdata;
+
+				nrf_transmit_parameter_t transmit_config;
+				/* 回复ACK */
+
+				AckTableLen = spi_message[14];
+				DataLen     = spi_message[14+AckTableLen+2];
+				Cmdtype     = spi_message[14+AckTableLen+1];
+				
+				if( Cmdtype == 0x40 )
+				{
+					prdata = spi_message+14+AckTableLen+2+2;
+					memcpy(transmit_config.dist,prdata, 4 );
+				}
+				else
+					memcpy(transmit_config.dist,spi_message+5, 4 );
+				transmit_config.package_type   = NRF_DATA_IS_ACK;
+				transmit_config.transmit_count = 2;
+				transmit_config.delay100us     = 20;
+				transmit_config.is_pac_add     = PACKAGE_NUM_SAM;
+				transmit_config.data_buf       = NULL;
+				transmit_config.data_len       = 0;
+				nrf_transmit_start( &transmit_config );
+			}
 		}
 	}
 	/* 收到的是Ack */
@@ -567,7 +570,7 @@ void retransmit_500ms_timer_callback( void )
 	send_count++;
 	send_data_status = SEND_500MS_DATA_STATUS;
 
-	if( send_count == 8 )
+	if( send_count == 4 )
 	{
 		send_data_status = SEND_2S_DATA_STATUS;
 		send_count = 0;
