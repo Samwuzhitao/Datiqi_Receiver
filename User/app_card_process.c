@@ -92,11 +92,11 @@ void App_card_process(void)
 		#endif
 
 		PcdAntennaOn();
-	  MRC500_DEBUG_START("PcdRequest \r\n");
+	 // MRC500_DEBUG_START("PcdRequest \r\n");
 		memset(g_cardType, 0, 40);
 		/* reqA指令 :请求A卡，返回卡类型，不同类型卡对应不同的UID长度 */
 		status = PcdRequest(PICC_REQIDL,g_cardType);
-	  MRC500_DEBUG_END();
+	  //MRC500_DEBUG_END();
 		if( status == MI_OK )
 		{
 			//DEBUG_CARD_DEBUG_LOG("PcdRequest status = %d\r\n",status);
@@ -126,7 +126,10 @@ void App_card_process(void)
 			return;
 		}
 		/* 防碰撞1 */
+		//MRC500_DEBUG_START("PcdAnticoll \r\n");
 		status = PcdAnticoll(PICC_ANTICOLL1, g_cSNR);
+		//MRC500_DEBUG_END();
+		DEBUG_CARD_DEBUG_LOG("PcdAnticoll status = %d\r\n",status);
 		if( status != MI_OK )
 		{
 			return;
@@ -135,11 +138,11 @@ void App_card_process(void)
 		/* 选卡1 */
 		memset(respon, 0, 10);
 		status = PcdSelect1(g_cSNR, respon);
+		DEBUG_CARD_DEBUG_LOG("PcdSelect1 status = %d\r\n",status);
 		if( status == MI_OK )
 		{
 			if((g_uid_len == 8) && ((respon[0] & 0x04) == 0x04))
 			{
-				DEBUG_CARD_DEBUG_LOG("PcdSelect1 status = %d\r\n",status);
 				//MRC500_DEBUG_START("PICC_ANTICOLL2 \r\n");
 				status = PcdAnticoll(PICC_ANTICOLL2, &g_cSNR[4]);
 				//MRC500_DEBUG_END();
@@ -148,10 +151,10 @@ void App_card_process(void)
 					return;
 				}
 				status = PcdSelect2(&g_cSNR[4], respon);
+				DEBUG_CARD_DEBUG_LOG("PcdSelect2 status = %d\r\n",status);
 				if( status == MI_OK)
 				{
 					rf_set_card_status(2);
-					DEBUG_CARD_DEBUG_LOG("PcdSelect2 status = %d\r\n",status);
 				}
 				else
 				{
@@ -493,7 +496,6 @@ void App_card_process(void)
 		#endif
 	}
 }
-
 /******************************************************************************
   Function:systick_timer_init
   Description:
