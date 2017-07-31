@@ -1214,8 +1214,7 @@ void serial_cmd_self_inspection(const cJSON *object)
 	{
 		case 0: b_print("  \"tx_rx_check\": \"OK\",\r\n"); break;
 		case 1: b_print("  \"tx_rx_check\": \"DEVICE ERROR\",\r\n"); break;
-		case 2: b_print("  \"tx_rx_check\": \"FIRMWARE ERROR\",\r\n"); break;
-		default: break;
+		default: b_print("  \"tx_rx_check\": \"FIRMWARE ERROR\",\r\n"); break;
 	}
 	b_print("  \"result\": \"0\"\r\n");
 	b_print("}\r\n");
