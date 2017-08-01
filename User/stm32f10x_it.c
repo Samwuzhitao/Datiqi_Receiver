@@ -29,21 +29,57 @@
 #include "cJSON.h"
 /* uart global variables */
 // revice part
-static uint32_t uart_rx_timeout       = 0;
-static uint8_t  flag_uart_rxing       = 0;
-static uint8_t  uart_status           = UartSTART;
-static uint8_t  uart_json_nesting_num = 0;
-static uint8_t  skip                  = 0x00;
+			  uint8_t  irq_buf[JSON_BUFFER_LEN];
+static  uint16_t irq_buf_cnt     = 0;
+				uint16_t wirq_buf_index  = 0;
+				uint16_t rirq_buf_index  = 0;
+        uint8_t  rbuf[JSON_ITEM_MAX][JSON_BUFFER_LEN];
+static  uint8_t  rbuf_s          = UartSTART;
+static  uint8_t  rjson_semaphore = 0;
+static  uint8_t  rjson_skip_flg  = 0x00;
+        uint16_t rjson_cnt       = 0;
+static  uint8_t  rjson_index     = 0;
 
-uint8_t  uart_irq_revice_massage[JSON_ITEM_MAX][JSON_BUFFER_LEN];
-uint16_t rjson_count = 0;
-uint8_t  rjson_index = 0;
+int8_t irq_buf_write( uint8_t data )
+{
+	if( irq_buf_cnt < JSON_BUFFER_LEN)
+	{
+		irq_buf[wirq_buf_index] = data;
+		wirq_buf_index = (wirq_buf_index + 1) % JSON_BUFFER_LEN;
+		irq_buf_cnt++;
+		return 0;
+	}
+	else
+		return 1;
+}
+
+int8_t irq_buf_read( uint8_t *temp_rbuf )
+{
+	if( irq_buf_cnt > 0 )
+	{
+		uint8_t i,r_out_cnt = (irq_buf_cnt >= 30) ? 30 : (irq_buf_cnt % 30);
+		
+		for(i = 0; i < r_out_cnt; i++ )
+		{
+			*(temp_rbuf+i) = irq_buf[rirq_buf_index];
+			rirq_buf_index = ( rirq_buf_index + 1 ) % JSON_BUFFER_LEN;
+			//printf("%c",*(temp_rbuf+i));
+		}
+		DISABLE_ALL_IRQ();
+		irq_buf_cnt -= r_out_cnt;
+		ENABLE_ALL_IRQ();
+		
+		return r_out_cnt;
+	}
+	else
+		return -1;
+}
 
 /* uart global variables */
 extern nrf_communication_t	nrf_data;
 extern revicer_typedef   revicer;
 /******************************************************************************
-  Function:uart_revice_data_state_mechine
+  Function:uart_json_decode
   Description:
 		串口数据接收函数，提取有效数据存入缓存
   Input:None
@@ -51,70 +87,61 @@ extern revicer_typedef   revicer;
   Return:
   Others:None
 ******************************************************************************/
-void json_skip(uint8_t data)
+void uart_json_decode( uint8_t data )
 {
-	if(( data ==  '\"') || ( data ==  '\''))
-		skip = skip^0x01;
-}
+	static uint16_t	rbuf_cnt     = 0;
 
-void uart_revice_data_state_mechine( uint8_t data )
-{
-	static uint16_t	uart_rx_cnt     = 0;
-
-	switch(uart_status)
+	switch(rbuf_s)
 	{
 		case UartSTART:
 			{
 				if(UART_SOF == data)
 				{
-					uart_rx_cnt           = 0;
-					uart_json_nesting_num = 0;
-					skip                  = 0x00;
-					uart_status           = UartDATA;
-					uart_json_nesting_num++;
-					uart_irq_revice_massage[rjson_index][uart_rx_cnt++] = data ;
-					flag_uart_rxing = 1;
+					rbuf_cnt        = 0;
+					rjson_semaphore = 0;
+					rjson_skip_flg  = 0x00;
+					rbuf_s          = UartDATA;
+					rjson_semaphore++;
+					rbuf[rjson_index][rbuf_cnt++] = data ;
 				}
 			}
 			break;
 
 		case UartDATA:
 			{
-				json_skip(data);
+				if(( data ==  '\"') || ( data ==  '\''))
+						rjson_skip_flg = rjson_skip_flg^0x01;
 
-				if((skip == 1) || (data > 32))
+				if((rjson_skip_flg == 1) || (data > 32))
 				{
-					uart_irq_revice_massage[rjson_index][uart_rx_cnt++] = data ;
+					rbuf[rjson_index][rbuf_cnt++] = data ;
 					if(UART_SOF == data)
 					{
-						uart_json_nesting_num++;
+						rjson_semaphore++;
 					}
-					if( uart_rx_cnt > JSON_BUFFER_LEN )
+					if( rbuf_cnt > JSON_BUFFER_LEN )
 					{
-						flag_uart_rxing = 0;
-						uart_status = UartSTART;
+						rbuf_s = UartSTART;
 						printf("{'fun':'Error','description':'uart buffer full!'}");
-						memset(uart_irq_revice_massage[rjson_index],0,JSON_BUFFER_LEN);
-						uart_rx_cnt = 0;
-						uart_json_nesting_num = 0;
-						uart_rx_timeout = 0;
-						rjson_count = 0;
+						memset(rbuf[rjson_index],0,JSON_BUFFER_LEN);
+						rbuf_cnt = 0;
+						rjson_semaphore = 0;
+						rjson_cnt = 0;
 						break;
 					}
 					if(UART_EOF == data)
 					{
-						uart_json_nesting_num--;
-						if(uart_json_nesting_num == 0)
+						rjson_semaphore--;
+						if(rjson_semaphore == 0)
 						{
-							if(rjson_count < JSON_ITEM_MAX  )
+							if(rjson_cnt < JSON_ITEM_MAX  )
 							{
 								rjson_index = (rjson_index+1) % JSON_ITEM_MAX;
-								rjson_count++;
+								rjson_cnt++;
 							}
-						  //printf("uart_rx_cnt = %d\r\n",uart_rx_cnt);
-							uart_rx_cnt     = 0;
-							uart_status     = UartSTART;
-							flag_uart_rxing = 0;
+						  //printf("rbuf_cnt = %d\r\n",rbuf_cnt);
+							rbuf_cnt = 0;
+							rbuf_s   = UartSTART;
 						}
 					}
 				}
@@ -124,21 +151,6 @@ void uart_revice_data_state_mechine( uint8_t data )
 		default:
 			break;
 	}
-}
-
-/******************************************************************************
-  Function:uart_send_data_state_machine
-  Description:
-		串口数发送函数，从缓存中提取数据发送到上位机
-  Input :
-		status: uart tx status
-  Output:
-  Return:
-  Others:None
-******************************************************************************/
-void uart_send_data_state_machine( void )
-{
-
 }
 
 /** @addtogroup STM32F10x_StdPeriph_Examples
@@ -282,19 +294,6 @@ void SysTick_Handler(void)
 	Timer_list_handler();
 
 	TimingDelay_Decrement();
-
-	if(flag_uart_rxing)												//串口接收超时计数器
-	{
-		uart_rx_timeout++;
-		if(uart_rx_timeout>20)										//5ms超时后重新开始接收
-		{
-			memset(uart_irq_revice_massage[rjson_index],
-				     0,JSON_BUFFER_LEN);
-			uart_json_nesting_num = 0;
-			uart_rx_timeout = 0;
-			rjson_count = 0;
-		}
-	}
 }
 
 /******************************************************************************/
@@ -324,16 +323,11 @@ void USART1pos_IRQHandler(void)
 	{
 	  uart_temp = USART_ReceiveData(USART1pos);
 
-		/* store it to uart_irq_revice_massage */
-		uart_revice_data_state_mechine( uart_temp );
-
-		uart_rx_timeout = 0;
+		/* store it to rbuf */
+		irq_buf_write( uart_temp );
+//			rbuf_timer = 0;
 	}
 
-	if(USART_GetITStatus(USART1pos, USART_IT_TXE) != RESET)
-  {
-    uart_send_data_state_machine( );
-	}
 }
 
 void NRF1_RFIRQ_EXTI_IRQHandler(void)

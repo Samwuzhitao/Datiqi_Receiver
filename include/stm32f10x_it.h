@@ -28,10 +28,10 @@
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
-#define JSON_ITEM_MAX    1
+#define JSON_ITEM_MAX    2
 #define JSON_BUFFER_LEN  4500
-extern uint8_t  uart_irq_revice_massage[JSON_ITEM_MAX][JSON_BUFFER_LEN];
-extern uint16_t rjson_count;
+extern uint8_t  rbuf[JSON_ITEM_MAX][JSON_BUFFER_LEN];
+extern uint16_t rjson_cnt;
 
 void NMI_Handler(void);
 void HardFault_Handler(void);
@@ -51,6 +51,9 @@ uint8_t rf_get_systick_status(void);
 void rf_change_systick_status(uint8_t rf_status);
 void rf_retransmit_set_status(uint8_t new_status);
 uint8_t get_rf_retransmit_status(void);
+void uart_json_decode( uint8_t data );
+int8_t irq_buf_read( uint8_t *data );
+void show_irq_buf(void);
 #endif /* __STM32F10x_IT_H */
 
 /******************* (C) COPYRIGHT 2009 STMicroelectronics *****END OF FILE****/

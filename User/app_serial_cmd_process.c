@@ -29,7 +29,7 @@ extern nrf_communication_t nrf_data;
 extern uint16_t list_tcb_table[UID_LIST_TABLE_SUM][WHITE_TABLE_LEN];
 
 /* 暂存题目信息，以备重发使用 */
-uint8_t json_read_index = 0;
+static uint8_t rjson_index = 0;
 uint8_t dtq_self_inspection_flg = 0;
 //uint8_t logic_pac_add = 0;
 
@@ -95,14 +95,24 @@ void exchange_json_format( char *out, char old_format, char new_format);
 ******************************************************************************/
 void serial_cmd_process(void)
 {
-	if( rjson_count > 0 )
+	/* 提取中断缓存数据到 */
+	uint8_t temp_data = 0, temp_rbuf[30];
+	int8_t  r_count = 0;
+	r_count = irq_buf_read( temp_rbuf );
+	if ( r_count > 0 )
+	{
+		uint8_t i = 0;
+		for( i=0; i<r_count; i++ )
+			uart_json_decode( temp_rbuf[i] );
+	}
+
+	if( rjson_cnt > 0 )
 	{
 		char header[30];
-		char *pdata = (char *)uart_irq_revice_massage[json_read_index];
+		char *pdata = (char *)rbuf[rjson_index];
 		/* 增加对'的支持 */
 		exchange_json_format( pdata, '\'', '\"' );
 		memcpy(header,pdata+8,14);
-
 		if( strncmp( header, "answer_start", sizeof("answer_start")-1)== 0 )
 		{
 			serial_cmd_answer_start( pdata );
@@ -114,7 +124,7 @@ void serial_cmd_process(void)
 		else
 		{
 			cJSON *json;
-			json = cJSON_Parse((char *)uart_irq_revice_massage[json_read_index]);
+			json = cJSON_Parse((char *)rbuf[rjson_index]);
 			if (!json)
 			{
 				  b_print("{\r\n");
@@ -125,30 +135,34 @@ void serial_cmd_process(void)
 			else
 			{
 				uint8_t i = 0, is_know_cmd = 0;
-				char *p_cmd_str = cJSON_GetObjectItem(json, "fun")->valuestring;
-
-				while(cmd_list[i].cmd_fun != NULL)
+				if( cJSON_HasObjectItem(json, "fun") )
 				{
-					if(strncmp(p_cmd_str, cmd_list[i].cmd_str,
-						 cmd_list[i].cmd_len)== 0)
+					char *p_cmd_str = cJSON_GetObjectItem(json, "fun")->valuestring;
+					printf("cmd : %s \r\n",p_cmd_str);
+
+					while(cmd_list[i].cmd_fun != NULL)
 					{
-						cmd_list[i].cmd_fun(json);
-						is_know_cmd = 1;
+						if(strncmp(p_cmd_str, cmd_list[i].cmd_str,
+							 cmd_list[i].cmd_len)== 0)
+						{
+							cmd_list[i].cmd_fun(json);
+							is_know_cmd = 1;
+						}
+						i++;
 					}
-					i++;
-				}
 
-				if(is_know_cmd == 0)
-				{
-					printf("{'fun':'Error','description':'unknow cmd!'}");
+					if(is_know_cmd == 0)
+					{
+						printf("{'fun':'Error','description':'unknow cmd!'}");
+					}
 				}
 			}
 			cJSON_Delete(json);
 		}
 
-		rjson_count--;
+		rjson_cnt--;
 		memset( pdata, 0, JSON_BUFFER_LEN );
-		json_read_index = (json_read_index + 1) % JSON_ITEM_MAX;
+		rjson_index = (rjson_index + 1) % JSON_ITEM_MAX;
 	}
 }
 
