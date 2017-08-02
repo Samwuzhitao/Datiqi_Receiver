@@ -783,7 +783,7 @@ uint8_t bsp_rf_rx_data( SPI_TypeDef* SPIx, uint8_t *buf_len, uint8_t *rbuf )
 {
 	uint8_t data[BUFFER_SIZE_MAX];
 	uint8_t i = 0;
-	uint8_t *pdata = NULL;
+	uint8_t nop = 0xFF;
 
 	*buf_len = 0;
 	memset(spi_cmd.data, 0xFF, BUFFER_SIZE_MAX);
@@ -791,14 +791,15 @@ uint8_t bsp_rf_rx_data( SPI_TypeDef* SPIx, uint8_t *buf_len, uint8_t *rbuf )
 	spi_cmd.data_len = 0x02;
 	spi_cmd.data[0] = 0xFF;
 	spi_cmd.data[1] = 0xFF;
-	pdata = (uint8_t *)&spi_cmd;
 
   /* 开始SPI传输 */
+	//printf("SPI_RX :");
 	NRF1_CSN_LOW();
 	memset(data, 0, BUFFER_SIZE_MAX);
 	for(i=0; i<spi_cmd.data_len+3; i++)
 	{
-		data[i] = hal_nrf_rw(SPIx, *(pdata+i));
+		data[i] = hal_nrf_rw( SPIx, nop );
+		//printf(" %02x",data[i]);
 		if( i == 3 && (data[2] & (1<<RX_DR)) && data[3] < BUFFER_SIZE_MAX )
 	  {
 			*buf_len = data[3];
@@ -809,6 +810,7 @@ uint8_t bsp_rf_rx_data( SPI_TypeDef* SPIx, uint8_t *buf_len, uint8_t *rbuf )
 	}
 	/* 关闭SPI传输 */
 	NRF1_CSN_HIGH();
+	//printf("\r\n");
 
 	memcpy(rbuf, &data[4],*buf_len);
 
@@ -818,7 +820,7 @@ uint8_t bsp_rf_rx_data( SPI_TypeDef* SPIx, uint8_t *buf_len, uint8_t *rbuf )
 		return 0;
 }
 
-uint8_t bsp_rf_tx_data( const uint8_t *tbuf, uint8_t len, uint8_t cnt, uint8_t us )
+uint8_t bsp_rf_tx_data( uint8_t *tbuf, uint8_t len, uint8_t cnt, uint8_t us )
 {
 	uint8_t data[BUFFER_SIZE_MAX];
 	uint16_t i = 0;
@@ -834,7 +836,17 @@ uint8_t bsp_rf_tx_data( const uint8_t *tbuf, uint8_t len, uint8_t cnt, uint8_t u
 		spi_cmd.data_len+2);
 	pdata = (uint8_t *)&spi_cmd;
 
+//	{
+//		uint8_t i;
+//		uint8_t *mdata = tbuf;
+//		printf("TX_DATA:");
+//		for(i=0;i<len;i++)
+//			printf(" %02x",*(mdata+i));
+//		printf("\r\n");
+//	}
+	
   /* 开始SPI传输 */
+	//printf("SPI_TX :");
 	NRF2_CSN_LOW();
 	memset(data, 0, BUFFER_SIZE_MAX);
 	for(i=0; i<spi_cmd.data_len+3; i++)
@@ -850,9 +862,11 @@ uint8_t bsp_rf_tx_data( const uint8_t *tbuf, uint8_t len, uint8_t cnt, uint8_t u
 #ifdef ZL_RP551_MAIN_H
 		data[i] = hal_nrf_rw(NRF_TX_SPI, *(pdata+i));
 #endif
+		//printf(" %02x",*(pdata+i));
 	}
 	/* 关闭SPI传输 */
 	NRF2_CSN_HIGH();
+	//printf("\r\n");
 
   /* 若接收到数据校验正确 */
 	if( data[0] != 0 ) 									

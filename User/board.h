@@ -163,7 +163,7 @@ uint8_t XOR_Cal(uint8_t *data, uint16_t length);
 
 void bsp_device_id_init( void );
 uint8_t bsp_rf_rx_data ( SPI_TypeDef* SPIx, uint8_t *buf_len, uint8_t *rbuf );
-uint8_t bsp_rf_tx_data ( const uint8_t *tbuf, uint8_t len, uint8_t cnt, uint8_t us );
+uint8_t bsp_rf_tx_data ( uint8_t *tbuf, uint8_t len, uint8_t cnt, uint8_t us );
 void nrf_transmit_start( uint8_t *tbuf, uint8_t buf_len, uint8_t buf_t,
 												 uint8_t cnt, uint8_t us, uint8_t sel_table, uint8_t pack_t);
 #endif //_BOARD_H_
