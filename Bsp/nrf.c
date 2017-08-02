@@ -615,11 +615,8 @@ void nrf_transmit_start( nrf_transmit_parameter_t *t_conf)
 	nrf_data.tlen = i;
 
 	/* 开始通讯之前先发2次，之后开启定时判断重发机制 */
-	spi_send_data_write_tx_payload(nrf_data.tbuf,
-																 nrf_data.tlen,
-																 t_conf->transmit_count,
-																 t_conf->delay100us,
-																 send_delay);
+	spi_write_data_to_buf( nrf_data.tbuf, nrf_data.tlen,
+												t_conf->transmit_count, t_conf->delay100us, send_delay);
 }
 
 /**************************************END OF FILE****************************/

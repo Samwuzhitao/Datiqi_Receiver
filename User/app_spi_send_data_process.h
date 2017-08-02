@@ -19,6 +19,5 @@ void change_spi_send_data_process_status( uint8_t new_status );
 uint8_t get_spi_send_data_process_status( void );
 void App_spi_send_data_process(void);
 void spi_send_data_process_timer_init( void );
-void spi_send_data_write_tx_payload( uint8_t *tx_buf,uint8_t tx_buf_len, uint8_t tx_count,
-	                         uint8_t nrf51822_delay100us, uint8_t spi_delayms );
+void spi_write_data_to_buf( u8 *buf, u8 len, u8 cnt, u8 us, u8 ms );
 #endif
