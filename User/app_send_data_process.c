@@ -72,283 +72,6 @@ void whitelist_checktable_and(uint8_t table1, uint8_t table2, uint8_t table)
 	}
 }
 
-void Parse_time_to_str( char *str )
-{
-	char* pdata = str;
-	char str1[10];
-	/*system_rtc_timer:year*/
-	memset(str1,0,4);
-	sprintf(str1, "%04d" , system_rtc_timer.year);
-	memcpy(pdata,str1,4);
-	pdata = pdata + 4;
-	*pdata = '-';
-	pdata++;
-
-	/*system_rtc_timer:mon*/
-	memset(str1,0,4);
-	sprintf(str1, "%02d" , system_rtc_timer.mon);
-	memcpy(pdata,str1,2);
-	pdata = pdata + 2;
-	*pdata  = '-';
-	pdata++;
-
-	/*system_rtc_timer:date*/
-	memset(str1,0,4);
-	sprintf(str1, "%02d" , system_rtc_timer.date);
-	memcpy(pdata,str1,2);
-	pdata = pdata + 2;
-	*pdata  = ' ';
-	pdata++;
-
-	/*system_rtc_timer:hour*/
-	memset(str1,0,4);
-	sprintf(str1, "%02d" , system_rtc_timer.hour);
-	memcpy(pdata,str1,2);
-	pdata = pdata + 2;
-	*pdata  = ':';
-	pdata++;
-
-	/*system_rtc_timer:min*/
-	memset(str1,0,4);
-	sprintf(str1, "%02d" , system_rtc_timer.min);
-	memcpy(pdata,str1,2);
-	pdata = pdata + 2;
-	*pdata  = ':';
-	pdata++;
-
-	/*system_rtc_timer:sec*/
-	memset(str1,0,4);
-	sprintf(str1, "%02d" , system_rtc_timer.sec);
-	memcpy(pdata,str1,2);
-	pdata = pdata + 2;
-	*pdata  = ':';
-	pdata++;
-	
-	/*system_rtc_timer:ms*/
-	memset(str1,0,5);
-	sprintf(str1, "%03d" , system_rtc_timer.ms);
-	memcpy(pdata,str1,3);
-	pdata = pdata + 3;
-}
-
-static void update_data_to_buffer( uint8_t *Message )
-{
-	typedef struct
-	{
-		uint8_t type;
-		uint8_t id;
-		uint8_t range;
-	}answer_info_typedef;
-
-	uint16_t uidpos;
-	uint8_t  Cmdtype;
-	uint16_t AckTableLen,DataLen;
-	answer_info_typedef answer_temp = {0,0,0};
-	uint16_t r_index = 0;
-	uint8_t  is_last_data_full = 0;
-	uint8_t  raise_sign = 0;
-		/* 获取数据的起始地址 */
-	uint8_t *prdata;
-	
-	AckTableLen = Message[14];
-	DataLen     = Message[14+AckTableLen+2];
-	Cmdtype     = Message[14+AckTableLen+1];
-	raise_sign  = *(Message+14+AckTableLen+2+1);
-	prdata      = Message+14+AckTableLen+2+2;
-
-	if( DataLen == 0 )
-		return;
-
-	if((( Cmdtype == 0x10 )||( Cmdtype == 0x24 )) && ( wl.start == ON ))
-	{
-		uint8_t Is_whitelist_uid = search_uid_in_white_list(Message+5,&uidpos);
-		if(Message[12] != wl.uids[uidpos].rev_num)//收到的是有效数据
-		{
-			char str[20];
-			uint8_t ClickerAnswerTime[CLICKER_TIMER_STR_LEN];
-			
-			b_print("{\r\n");
-			b_print("  \"fun\": \"update_answer_list\",\r\n");
-			memset(str,0,20);
-			sprintf(str, "%010u" , *(uint32_t *)( wl.uids[uidpos].uid));
-			b_print("  \"card_id\": \"%s\",\r\n", str );
-			memset(str,0,20);
-			sprintf(str, "%d" , ( wl.uids[uidpos].rssi));
-			b_print("  \"rssi\": \"-%s\",\r\n", str );
-			memset(ClickerAnswerTime,0x00,CLICKER_TIMER_STR_LEN);
-			Parse_time_to_str((char *)ClickerAnswerTime);
-			b_print("  \"update_time\": \"%s\",\r\n",(char *) ClickerAnswerTime );
-
-			if( Cmdtype == 0x10 )
-			{
-				char answer_type[2];
-				char answer_range[7];
-				char answer_id[3];
-				is_last_data_full = 0;
-				r_index = 0;
-
-				b_print("  \"raise_hand\": \"%d\",\r\n", (raise_sign & 0x01) ? 1: 0 );
-				b_print("  \"attendance\": \"%d\",\r\n", (raise_sign & 0x02) ? 1: 0 );
-
-				b_print("  \"answers\": [\r\n");
-				while( r_index < DataLen-3 )
-				{
-					b_print("    {");
-					if(is_last_data_full == 0)
-					{
-						answer_temp.type  = prdata[r_index] & 0x0F;
-						answer_temp.id    = ((prdata[r_index]   & 0xF0) >> 4)| 
-																((prdata[r_index+1] & 0x0F) << 4);
-						answer_temp.range = ((prdata[r_index+1] & 0xF0) >> 4)| 
-																((prdata[r_index+2] & 0x0F) << 4);
-						r_index = r_index + 2;
-						is_last_data_full = 1;
-					}
-					else
-					{
-						answer_temp.type  = (prdata[r_index] & 0xF0) >> 4;
-						answer_temp.id    = prdata[r_index+1];
-						answer_temp.range = prdata[r_index+2];
-						r_index = r_index + 3;
-						is_last_data_full = 0;
-					}
-					
-					memset(answer_range,0x00,7);
-					memset(answer_type, 0x00,2);
-					memset(answer_id,   0x00,3);
-					
-					sprintf(answer_id, "%d" , answer_temp.id);
-					
-					switch( answer_temp.type )
-					{
-						case 0: 
-						{
-							uint8_t answer = (answer_temp.range)&0x3F;
-							uint8_t *pdata = (uint8_t *)answer_range;
-							switch(answer)
-							{
-								case 0x01: *pdata = 'A'; break;
-								case 0x02: *pdata = 'B'; break;
-								case 0x04: *pdata = 'C'; break;
-								case 0x08: *pdata = 'D'; break;
-								case 0x10: *pdata = 'E'; break;
-								case 0x20: *pdata = 'F'; break;
-								default: break;
-							}
-							memcpy(answer_type,"s",sizeof("s"));
-						}
-						break;
-
-						case 1: 
-						{
-							uint8_t i;
-							uint8_t answer = (answer_temp.range)&0x3F;
-							uint8_t *pdata = (uint8_t *)answer_range;
-							
-							for( i=0; i<='F'-'A'; i++ )
-							{
-								uint8_t mask_bit = 1 << i;
-								if( (answer & mask_bit) == mask_bit )
-								{
-									*pdata = 'A'+i;
-									pdata = pdata + 1;
-								}
-							}
-
-							memcpy(answer_type,"m",sizeof("m"));
-						}
-						break;
-
-						case 2: 
-						{
-							uint8_t answer = (answer_temp.range)&0x3F;
-							
-							switch(answer)
-							{
-								case 0x01: // true
-									memcpy(answer_range,"true",sizeof("true"));
-								break;
-								case 0x02: // false
-									memcpy(answer_range,"false",sizeof("false"));
-								break;
-								default: break;
-							}
-								
-							memcpy(answer_type,"j",sizeof("j"));
-						}
-						break;
-
-						case 3: 
-						{
-							if(answer_temp.range < 100)
-								sprintf(answer_range, "%d" , answer_temp.range);
-							memcpy(answer_type,"d",sizeof("d"));
-						}
-						break;
-						
-						case 4: 
-						{
-							uint8_t answer = 0;
-							{
-								uint8_t i;
-								uint8_t *pdata = (uint8_t *)answer_range;
-
-								answer = (answer_temp.range)&0x3F;
-
-								for( i=0; i<='F'-'A'; i++ )
-								{
-									uint8_t mask_bit = 1 << i;
-									if( (answer & mask_bit) == mask_bit )
-									{
-										*pdata = 'A'+i;
-										pdata = pdata + 1;
-									}
-								}
-							}
-
-							answer = (answer_temp.range)&0xC0;
-							switch(answer)
-							{
-								case 0x40: // true
-									memcpy(answer_range,"true",sizeof("true"));
-								break;
-								case 0x80: // false
-									memcpy(answer_range,"false",sizeof("false"));
-								break;
-								default: break;
-							}
-
-							memcpy(answer_type,"g",sizeof("g"));
-						}
-						break;
-						
-						default: break;
-					}
-					b_print("\"type\": \"%s\", ",answer_type);
-					b_print("\"id\": \"%s\", ",answer_id);
-					b_print("\"answer\": \"%s\" ",answer_range);
-					if( r_index < DataLen-2 )
-						b_print("},\r\n");
-					else
-						b_print("}\r\n");
-				}
-			}
-			
-			b_print("  ]\r\n");
-			b_print("}\r\n");
-
-			if( Cmdtype == 0x24 )
-			{
-				
-			}
-
-			/* 更新接收数据帧号与包号 */
-			wl.uids[uidpos].rev_seq = Message[11];
-			wl.uids[uidpos].rev_num = Message[12];	
-		}
-	}
-}
-
 /******************************************************************************
   Function:spi_process_revice_data
   Description:
@@ -397,19 +120,22 @@ void spi_process_revice_data( void )
 
 		if( wl.start == ON )
 		{
-			nrf_transmit_parameter_t transmit_config;
-			/* 回复ACK */
-			memcpy(transmit_config.dist,spi_message+5, 4 );
-			transmit_config.package_type   = NRF_DATA_IS_ACK;
-			transmit_config.transmit_count = 2;
-			transmit_config.delay100us     = 20;
-			transmit_config.is_pac_add     = PACKAGE_NUM_SAM;
-			transmit_config.data_buf       = NULL;
-			transmit_config.data_len       = 0;
-			nrf_transmit_start( &transmit_config );
+			/* 将数据送入PC的发送缓冲区 */
+			if(BUF_FULL != buffer_get_buffer_status(SPI_RBUF))
+			{
+				nrf_transmit_parameter_t transmit_config;
 
-			/* 有效数据告到PC */
-			update_data_to_buffer( spi_message );
+				/* 回复ACK */
+				memcpy(transmit_config.dist,spi_message+5, 4 );
+				transmit_config.package_type   = NRF_DATA_IS_ACK;
+				transmit_config.transmit_count = 2;
+				transmit_config.delay100us     = 20;
+				transmit_config.is_pac_add     = PACKAGE_NUM_SAM;
+				transmit_config.data_buf       = NULL;
+				transmit_config.data_len       = 0;
+				nrf_transmit_start( &transmit_config );
+				spi_write_data_to_buffer(UART_RBUF,spi_message);
+			}
 		}
 	}
 	/* 收到的是Ack */
@@ -418,16 +144,16 @@ void spi_process_revice_data( void )
 		uint8_t Is_reviceed_uid = get_index_of_white_list_pos_status(SEND_DATA_ACK_TABLE,uidpos);
 		if( Is_reviceed_uid == 0)
 		{
-			printf("[NEW_ACK] upos[%03d] uid:%02x%02x%02x%02x, ",uidpos,\
+			DEBUG_BUFFER_DTATA_LOG("[NEW_ACK] upos[%03d] uid:%02x%02x%02x%02x, ",uidpos,\
 				*(spi_message+5),*(spi_message+6),*(spi_message+7),*(spi_message+8));
-			printf("seq:%2x, pac:%2x \r\n",(uint8_t)*(spi_message+11), \
+			DEBUG_BUFFER_DTATA_LOG("seq:%2x, pac:%2x \r\n",(uint8_t)*(spi_message+11), \
 				(uint8_t)*(spi_message+12));
 		}
 		else
 		{
-			printf("[OLD_ACK] upos[%03d] uid:%02x%02x%02x%02x, ",uidpos,\
+			DEBUG_BUFFER_DTATA_LOG("[OLD_ACK] upos[%03d] uid:%02x%02x%02x%02x, ",uidpos,\
 				*(spi_message+5),*(spi_message+6),*(spi_message+7),*(spi_message+8));
-			printf("seq:%2x, pac:%2x \r\n",(uint8_t)*(spi_message+11), \
+			DEBUG_BUFFER_DTATA_LOG("seq:%2x, pac:%2x \r\n",(uint8_t)*(spi_message+11), \
 				(uint8_t)*(spi_message+12));
 		}
 

@@ -30,6 +30,7 @@ extern uint16_t list_tcb_table[UID_LIST_TABLE_SUM][WHITE_TABLE_LEN];
 
 /* 暂存题目信息，以备重发使用 */
 static uint8_t rjson_index = 0;
+static uint8_t uart_send_s = 0;
 uint8_t dtq_self_inspection_flg = 0;
 //uint8_t logic_pac_add = 0;
 
@@ -37,6 +38,12 @@ extern wl_typedef       wl;
 extern revicer_typedef  revicer;
 extern task_tcb_typedef card_task;
 /* Private functions ---------------------------------------------------------*/
+typedef struct
+{
+	uint8_t type;
+	uint8_t id;
+	uint8_t range;
+}answer_info_typedef;
 
 const static serial_cmd_typedef cmd_list[] = {
 {"clear_wl",       sizeof("clear_wl"),       serial_cmd_clear_uid_list},
@@ -96,7 +103,7 @@ void exchange_json_format( char *out, char old_format, char new_format);
 void serial_cmd_process(void)
 {
 	/* 提取中断缓存数据到 */
-	uint8_t temp_data = 0, temp_rbuf[30];
+	uint8_t temp_rbuf[30];
 	int8_t  r_count = 0;
 	r_count = irq_buf_read( temp_rbuf );
 	if ( r_count > 0 )
@@ -230,6 +237,66 @@ void App_seirial_cmd_process(void)
 	serial_cmd_process();
 }
 
+void Parse_time_to_str( char *str )
+{
+	char* pdata = str;
+	char str1[10];
+	/*system_rtc_timer:year*/
+	memset(str1,0,4);
+	sprintf(str1, "%04d" , system_rtc_timer.year);
+	memcpy(pdata,str1,4);
+	pdata = pdata + 4;
+	*pdata = '-';
+	pdata++;
+
+	/*system_rtc_timer:mon*/
+	memset(str1,0,4);
+	sprintf(str1, "%02d" , system_rtc_timer.mon);
+	memcpy(pdata,str1,2);
+	pdata = pdata + 2;
+	*pdata  = '-';
+	pdata++;
+
+	/*system_rtc_timer:date*/
+	memset(str1,0,4);
+	sprintf(str1, "%02d" , system_rtc_timer.date);
+	memcpy(pdata,str1,2);
+	pdata = pdata + 2;
+	*pdata  = ' ';
+	pdata++;
+
+	/*system_rtc_timer:hour*/
+	memset(str1,0,4);
+	sprintf(str1, "%02d" , system_rtc_timer.hour);
+	memcpy(pdata,str1,2);
+	pdata = pdata + 2;
+	*pdata  = ':';
+	pdata++;
+
+	/*system_rtc_timer:min*/
+	memset(str1,0,4);
+	sprintf(str1, "%02d" , system_rtc_timer.min);
+	memcpy(pdata,str1,2);
+	pdata = pdata + 2;
+	*pdata  = ':';
+	pdata++;
+
+	/*system_rtc_timer:sec*/
+	memset(str1,0,4);
+	sprintf(str1, "%02d" , system_rtc_timer.sec);
+	memcpy(pdata,str1,2);
+	pdata = pdata + 2;
+	*pdata  = ':';
+	pdata++;
+	
+	/*system_rtc_timer:ms*/
+	memset(str1,0,5);
+	sprintf(str1, "%03d" , system_rtc_timer.ms);
+	memcpy(pdata,str1,3);
+	pdata = pdata + 3;
+}
+
+
 /******************************************************************************
   Function:serial_send_data_to_pc
   Description:
@@ -240,6 +307,263 @@ void App_seirial_cmd_process(void)
 ******************************************************************************/
 static void serial_send_data_to_pc(void)
 {
+	static uint8_t  spi_message[255];
+	static uint8_t  Cmdtype;
+	static uint16_t uidpos = 0xFFFF,DataLen;
+	static uint16_t r_index = 0;
+	static uint8_t  is_last_data_full = 0;
+
+	if( uart_send_s == 0 )
+	{
+		if(buffer_get_buffer_status(UART_RBUF) == BUF_EMPTY)
+			return;
+		else
+		{
+			memset(spi_message,0,255);
+			spi_read_data_from_buffer( UART_RBUF, spi_message );
+			uart_send_s = 1;
+		}
+		return;
+	}
+
+	if( uart_send_s == 1 )
+	{
+		uint16_t AckTableLen;
+
+		AckTableLen = spi_message[14];
+		DataLen     = spi_message[14+AckTableLen+2];
+		Cmdtype     = spi_message[14+AckTableLen+1];
+		
+		if( DataLen == 0 )
+		{
+			memset(spi_message,0,255);
+			uart_send_s = 0;
+			Cmdtype     = 0;
+		}
+		else
+		{
+			if(search_uid_in_white_list(spi_message+5,&uidpos) == OPERATION_SUCCESS )
+			{
+				if(spi_message[12] != wl.uids[uidpos].rev_num)
+					uart_send_s = 2;
+				else
+				{
+					memset(spi_message,0,255);
+					uart_send_s = 0;
+					Cmdtype     = 0;
+				}	
+			}
+			else
+			{
+				memset(spi_message,0,255);
+				uart_send_s = 0;
+				Cmdtype     = 0;
+			}
+		}
+		return;
+	}
+
+	if( uart_send_s == 2 )
+	{
+		if(( Cmdtype == 0x10 ) && ( wl.start == ON ))
+		{
+			uint8_t ClickerAnswerTime[CLICKER_TIMER_STR_LEN];
+			uint8_t  raise_sign = 0;
+	
+			raise_sign  = *(spi_message+14+spi_message[14]+2+1);
+			b_print("{\r\n");
+			b_print("  \"fun\": \"update_answer_list\",\r\n");
+			b_print("  \"card_id\": \"%010u\",\r\n", *(uint32_t *)( wl.uids[uidpos].uid) );
+			b_print("  \"rssi\": \"-%d\",\r\n", wl.uids[uidpos].rssi );
+			memset( ClickerAnswerTime, 0x00,CLICKER_TIMER_STR_LEN );
+			Parse_time_to_str((char *)ClickerAnswerTime);
+			b_print("  \"update_time\": \"%s\",\r\n",(char *) ClickerAnswerTime );
+			b_print("  \"raise_hand\": \"%d\",\r\n", (raise_sign & 0x01) ? 1: 0 );
+			b_print("  \"attendance\": \"%d\",\r\n", (raise_sign & 0x02) ? 1: 0 );
+			b_print("  \"answers\": [\r\n");
+			uart_send_s = 3;
+		}
+		else
+		{
+			memset(spi_message,0,255);
+			uart_send_s = 0;
+			Cmdtype     = 0;
+		}
+		return;
+	}
+	
+	if( uart_send_s == 3 )
+	{
+		char answer_type[2];
+		char answer_range[7];
+		answer_info_typedef answer_temp = {0,0,0};
+		
+		uint8_t  *prdata;
+		prdata   = spi_message+14+spi_message[14]+2+2;
+		
+		if( r_index < DataLen-3 )
+		{
+			if(is_last_data_full == 0)
+			{
+				answer_temp.type  = prdata[r_index] & 0x0F;
+				answer_temp.id    = ((prdata[r_index]   & 0xF0) >> 4)| 
+														((prdata[r_index+1] & 0x0F) << 4);
+				answer_temp.range = ((prdata[r_index+1] & 0xF0) >> 4)| 
+														((prdata[r_index+2] & 0x0F) << 4);
+				r_index = r_index + 2;
+				is_last_data_full = 1;
+			}
+			else
+			{
+				answer_temp.type  = (prdata[r_index] & 0xF0) >> 4;
+				answer_temp.id    = prdata[r_index+1];
+				answer_temp.range = prdata[r_index+2];
+				r_index = r_index + 3;
+				is_last_data_full = 0;
+			}
+			
+			memset(answer_range,0x00,7);
+			memset(answer_type, 0x00,2);
+
+			switch( answer_temp.type )
+			{
+				case 0: 
+				{
+					uint8_t answer = (answer_temp.range)&0x3F;
+					uint8_t *pdata = (uint8_t *)answer_range;
+					switch(answer)
+					{
+						case 0x01: *pdata = 'A'; break;
+						case 0x02: *pdata = 'B'; break;
+						case 0x04: *pdata = 'C'; break;
+						case 0x08: *pdata = 'D'; break;
+						case 0x10: *pdata = 'E'; break;
+						case 0x20: *pdata = 'F'; break;
+						default: break;
+					}
+					memcpy(answer_type,"s",sizeof("s"));
+				}
+				break;
+
+				case 1: 
+				{
+					uint8_t i;
+					uint8_t answer = (answer_temp.range)&0x3F;
+					uint8_t *pdata = (uint8_t *)answer_range;
+					
+					for( i=0; i<='F'-'A'; i++ )
+					{
+						uint8_t mask_bit = 1 << i;
+						if( (answer & mask_bit) == mask_bit )
+						{
+							*pdata = 'A'+i;
+							pdata = pdata + 1;
+						}
+					}
+
+					memcpy(answer_type,"m",sizeof("m"));
+				}
+				break;
+
+				case 2: 
+				{
+					uint8_t answer = (answer_temp.range)&0x3F;
+					
+					switch(answer)
+					{
+						case 0x01: // true
+							memcpy(answer_range,"true",sizeof("true"));
+						break;
+						case 0x02: // false
+							memcpy(answer_range,"false",sizeof("false"));
+						break;
+						default: break;
+					}
+						
+					memcpy(answer_type,"j",sizeof("j"));
+				}
+				break;
+
+				case 3: 
+				{
+					if(answer_temp.range < 100)
+						sprintf(answer_range, "%d" , answer_temp.range);
+					memcpy(answer_type,"d",sizeof("d"));
+				}
+				break;
+				
+				case 4: 
+				{
+					uint8_t answer = 0;
+					{
+						uint8_t i;
+						uint8_t *pdata = (uint8_t *)answer_range;
+
+						answer = (answer_temp.range)&0x3F;
+
+						for( i=0; i<='F'-'A'; i++ )
+						{
+							uint8_t mask_bit = 1 << i;
+							if( (answer & mask_bit) == mask_bit )
+							{
+								*pdata = 'A'+i;
+								pdata = pdata + 1;
+							}
+						}
+					}
+
+					answer = (answer_temp.range)&0xC0;
+					switch(answer)
+					{
+						case 0x40: // true
+							memcpy(answer_range,"true",sizeof("true"));
+						break;
+						case 0x80: // false
+							memcpy(answer_range,"false",sizeof("false"));
+						break;
+						default: break;
+					}
+
+					memcpy(answer_type,"g",sizeof("g"));
+				}
+				break;
+				
+				default: break;
+			}
+			b_print("    {");
+			b_print("\"type\": \"%s\", ",answer_type);
+			b_print("\"id\": \"%d\", ", answer_temp.id);
+			b_print("\"answer\": \"%s\" ",answer_range);
+			if( r_index < DataLen-2 )
+				b_print("},\r\n");
+			else
+			{
+				b_print("}\r\n");
+				b_print("  ]\r\n");
+				b_print("}\r\n");
+				uart_send_s = 4;
+				r_index     = 0;
+				is_last_data_full = 0;
+			}
+			return;
+		}
+	}
+	
+	if(uart_send_s == 4)
+	{
+		uint8_t is_retuen_ack = 0;
+		if(is_retuen_ack == 1)
+		{
+			uart_send_s = 2;
+		}
+		else
+		{
+			memset(spi_message,0,255);
+			uart_send_s = 0;
+			Cmdtype     = 0;
+		}
+	}
+
 //	if((uart_sen_status.get_status(&(uart_sen_status.state))) == 0)
 //	{
 //		/* enable interrupt Start send data*/

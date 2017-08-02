@@ -13,12 +13,13 @@
 /* Private variables ---------------------------------------------------------*/
 static uint8_t  spi_rbuf[SPI_RBUF_SIZE];
 static uint8_t  ptint_buf[PRINT_RBUF_SIZE];
-const uint32_t  buf_size[BUF_NUM]        = { PRINT_RBUF_SIZE, SPI_RBUF_SIZE };
-static uint8_t  *pbuf[BUF_NUM]           = { ptint_buf, spi_rbuf };
-static volatile uint16_t top[BUF_NUM]    = { 0, 0 };
-static volatile uint16_t bottom[BUF_NUM] = { 0, 0 };
-static volatile int32_t  Size[BUF_NUM]   = { 0, 0 };
-static volatile uint8_t  status[BUF_NUM] = { BUF_EMPTY, BUF_EMPTY };
+static uint8_t  uart_data_buf[SPI_RBUF_SIZE];
+const uint32_t  buf_size[BUF_NUM]        = { PRINT_RBUF_SIZE, SPI_RBUF_SIZE, SPI_RBUF_SIZE };
+static uint8_t  *pbuf[BUF_NUM]           = { ptint_buf, spi_rbuf, uart_data_buf };
+static volatile uint16_t top[BUF_NUM]    = { 0, 0, 0 };
+static volatile uint16_t bottom[BUF_NUM] = { 0, 0, 0 };
+static volatile int32_t  Size[BUF_NUM]   = { 0, 0, 0 };
+static volatile uint8_t  status[BUF_NUM] = { BUF_EMPTY, BUF_EMPTY, BUF_EMPTY };
 
 /* Private functions ---------------------------------------------------------*/
 static void    update_read_status( uint8_t sel) ;

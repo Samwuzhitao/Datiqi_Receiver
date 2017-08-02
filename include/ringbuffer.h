@@ -18,11 +18,12 @@
 /* Set parameter of budffer */
 #define PRINT_BUF            0
 #define SPI_RBUF             1
+#define UART_RBUF            2
 
 #define PACKETSIZE           (UART_NBUF+9)
 #define SPI_RBUF_SIZE        (1024*5)
 #define PRINT_RBUF_SIZE      (1)
-#define BUF_NUM              (2)
+#define BUF_NUM              (3)
 
 
 /* buffer status  */

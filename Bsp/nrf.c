@@ -570,7 +570,7 @@ void nrf_transmit_start( nrf_transmit_parameter_t *t_conf)
 		send_delay = 10;
 	}
 	
-//#ifdef OPEN_ACK_TABLE_SHOW
+#ifdef OPEN_ACK_TABLE_SHOW
 	{
 		uint8_t i = 0, printf_flg = 0;
 		uint8_t *pdata = (uint8_t *)list_tcb_table[t_conf->sel_table];
@@ -593,7 +593,7 @@ void nrf_transmit_start( nrf_transmit_parameter_t *t_conf)
 			printf("\r\n");
 		}
 	}
-//#endif
+#endif
 
 	if(t_conf->package_type == NRF_DATA_IS_USEFUL)
 	{
