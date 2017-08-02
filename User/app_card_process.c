@@ -88,7 +88,7 @@ void App_card_process(void)
 			if(card_ok_flg == 2)
 				card_ok_flg = 0;
 		
-			if( (g_cardType[0] & 0x40) == 0x40)	
+			if( (g_cardType[0] & 0x40) == 0x40 )
 				u_len = 8;	
 			else
 				u_len = 4;
@@ -126,6 +126,12 @@ void App_card_process(void)
 					rf_set_card_status(2);
 				else
 					return;
+			}
+			if(u_len == 4)
+			{
+				u_err = 1;
+				flash_ok_flg = 1;
+				rf_set_card_status(3);
 			}
 		}
 		else
@@ -395,7 +401,12 @@ void App_card_process(void)
 			{
 				card_message.DATA[0] = u_pos_w;
 			}
-			memcpy(card_message.DATA+1,g_cSNR+4,4);
+
+			if( u_len == 8 )
+				memcpy(card_message.DATA+1,g_cSNR+4,4);
+			if( u_len == 4 )
+				memcpy(card_message.DATA+1,g_cSNR,4);
+
 			{
 				uint8_t j=0;
 				uint8_t *pdata = card_message.DATA+5;
