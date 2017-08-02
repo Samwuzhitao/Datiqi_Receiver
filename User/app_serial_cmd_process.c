@@ -138,7 +138,6 @@ void serial_cmd_process(void)
 				if( cJSON_HasObjectItem(json, "fun") )
 				{
 					char *p_cmd_str = cJSON_GetObjectItem(json, "fun")->valuestring;
-					printf("cmd : %s \r\n",p_cmd_str);
 
 					while(cmd_list[i].cmd_fun != NULL)
 					{

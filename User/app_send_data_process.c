@@ -416,11 +416,20 @@ void spi_process_revice_data( void )
 	if(spi_message_type == NRF_DATA_IS_ACK)
 	{
 		uint8_t Is_reviceed_uid = get_index_of_white_list_pos_status(SEND_DATA_ACK_TABLE,uidpos);
-
-		DEBUG_BUFFER_DTATA_LOG("[ACK] uid:%02x%02x%02x%02x, ",\
-			*(spi_message+5),*(spi_message+6),*(spi_message+7),*(spi_message+8));
-		DEBUG_BUFFER_DTATA_LOG("seq:%2x, pac:%2x \r\n",(uint8_t)*(spi_message+11), \
-			(uint8_t)*(spi_message+12));
+		if( Is_reviceed_uid == 0)
+		{
+			printf("[NEW_ACK] upos[%03d] uid:%02x%02x%02x%02x, ",uidpos,\
+				*(spi_message+5),*(spi_message+6),*(spi_message+7),*(spi_message+8));
+			printf("seq:%2x, pac:%2x \r\n",(uint8_t)*(spi_message+11), \
+				(uint8_t)*(spi_message+12));
+		}
+		else
+		{
+			printf("[OLD_ACK] upos[%03d] uid:%02x%02x%02x%02x, ",uidpos,\
+				*(spi_message+5),*(spi_message+6),*(spi_message+7),*(spi_message+8));
+			printf("seq:%2x, pac:%2x \r\n",(uint8_t)*(spi_message+11), \
+				(uint8_t)*(spi_message+12));
+		}
 
 		if(( get_send_data_status() == 0 ) || ( Is_reviceed_uid != 0 ))
 			return;
@@ -431,7 +440,7 @@ void spi_process_revice_data( void )
 }
 
 void App_retransmit_data( uint8_t is_new_pack, uint8_t is_new_logic_pack)
-{		
+{
 	nrf_transmit_parameter_t transmit_config;
 	memset(transmit_config.dist,0, 4);
 	transmit_config.package_type   = NRF_DATA_IS_PRE;

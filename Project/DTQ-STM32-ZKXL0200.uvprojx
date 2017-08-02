@@ -48,7 +48,7 @@
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
           <OutputDirectory>.\Objects\</OutputDirectory>
-          <OutputName>DTQ_RP552CPU_ZKXL0200_V0105_201706091114</OutputName>
+          <OutputName>DTQ_RP552CPU_ZKXL0230_V0203_201708011130</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>

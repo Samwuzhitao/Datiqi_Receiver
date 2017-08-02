@@ -570,14 +570,14 @@ void nrf_transmit_start( nrf_transmit_parameter_t *t_conf)
 		send_delay = 10;
 	}
 	
-#ifdef OPEN_ACK_TABLE_SHOW
+//#ifdef OPEN_ACK_TABLE_SHOW
 	{
 		uint8_t i = 0, printf_flg = 0;
 		uint8_t *pdata = (uint8_t *)list_tcb_table[t_conf->sel_table];
-		printf("Seq:%2x Pac:%2x LogicPac:%2x ",revicer.sen_seq-1,revicer.sen_num,logic_pac);
+		printf("Seq:%2x Pac:%2x LogicPac:%2x ",revicer.sen_seq,revicer.sen_num,logic_pac);
+		printf("DATA_TYPE:%d ",t_conf->package_type);
 		switch(t_conf->package_type)
 		{
-			
 			case 0: printf("DATA TABLE"); printf_flg = 1; break;
 			case 2: printf("PRE  TABLE"); printf_flg = 1; break;
 			default: break;
@@ -593,7 +593,7 @@ void nrf_transmit_start( nrf_transmit_parameter_t *t_conf)
 			printf("\r\n");
 		}
 	}
-#endif
+//#endif
 
 	if(t_conf->package_type == NRF_DATA_IS_USEFUL)
 	{

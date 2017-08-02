@@ -28,7 +28,7 @@
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
-#define JSON_ITEM_MAX    2
+#define JSON_ITEM_MAX    1
 #define JSON_BUFFER_LEN  4500
 extern uint8_t  rbuf[JSON_ITEM_MAX][JSON_BUFFER_LEN];
 extern uint16_t rjson_cnt;
