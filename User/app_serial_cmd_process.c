@@ -23,18 +23,13 @@ static uint8_t whitelist_print_index = 0;
 
 extern uint8_t is_open_statistic;
 extern uint8_t uart_tx_status;
-extern uint16_t list_tcb_table[16][8];
-extern nrf_communication_t nrf_data;
-extern rf_config_typedef clicker_set;
+
        uint8_t serial_cmd_status = APP_SERIAL_CMD_STATUS_IDLE;
 			 uint8_t serial_cmd_type = 0;
 			 uint8_t err_cmd_type = 0;
 
 /* 暂存题目信息，以备重发使用 */
 Uart_MessageTypeDef backup_massage;
-
-extern WhiteList_Typedef wl;
-extern Revicer_Typedef   revicer;
 extern Process_tcb_Typedef systick_process;
 
 /* Private functions ---------------------------------------------------------*/
@@ -463,7 +458,7 @@ static void serial_cmd_process(void)
 
 		if(BUFFERFULL == buffer_get_buffer_status(SEND_RINGBUFFER))
 		{
-			DebugLog("Serial Send Buffer is full! \r\n");
+			printf("Serial Send Buffer is full! \r\n");
 		}
 		else
 		{
@@ -471,28 +466,6 @@ static void serial_cmd_process(void)
 				serial_ringbuffer_write_data(SEND_RINGBUFFER,&SendMessage);
 		}
 	}
-}
-
-void app_debuglog_dump(uint8_t * p_buffer, uint32_t len)
-{
-	uint32_t index = 0;
-
-    for (index = 0; index <  len; index++)
-    {
-        DebugLog("%02X ", p_buffer[index]);
-    }
-    DebugLog("\r\n");
-}
-
-void app_debuglog_dump_no_space(uint8_t * p_buffer, uint32_t len)
-{
-	uint32_t index = 0;
-
-    for (index = 0; index <  len; index++)
-    {
-        DebugLog("%02X", p_buffer[index]);
-    }
-    DebugLog("\r\n");
 }
 
 /******************************************************************************
@@ -707,7 +680,7 @@ void App_open_or_close_white_list( Uart_MessageTypeDef *RMessage,
 {
 	uint8_t *pdata = (uint8_t *)(SMessage->DATA);
 	uint8_t i = 0;
-	bool openstatus = false;
+	uint8_t openstatus = 0;
 
 	SMessage->HEADER = 0x5C;
 
@@ -759,7 +732,6 @@ void App_stop_send_data_to_clickers( Uart_MessageTypeDef *RMessage, Uart_Message
 	SMessage->HEADER = 0x5C;
 	SMessage->TYPE = RMessage->TYPE;
 	memcpy(SMessage->SIGN, RMessage->SIGN, 4);
-
 	SMessage->LEN = 0x03;
 
 	{
@@ -803,11 +775,8 @@ void App_operate_uids_to_whitelist( Uart_MessageTypeDef *RMessage, Uart_MessageT
 	uint8_t UidAddStatus[8] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
 	SMessage->HEADER = 0x5C;
-
 	SMessage->TYPE = RMessage->TYPE;
-
 	memcpy(SMessage->SIGN, RMessage->SIGN, 4);
-
 	SMessage->LEN = 10;
 
 	for(j = 0; j < UidNum; j++)
@@ -867,9 +836,7 @@ uint8_t App_return_whitelist_data( Uart_MessageTypeDef *RMessage, Uart_MessageTy
 	uint8_t tempuid[4] = {0,0,0,0};
 
 	SMessage->HEADER = 0x5C;
-
 	SMessage->TYPE = RMessage->TYPE;
-
 	memcpy(SMessage->SIGN, RMessage->SIGN, 4);
 
 	while((uid_count*5<UART_NBUF-6)&&(uid_p<120))
@@ -973,9 +940,7 @@ void App_return_device_info( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef 
 	uint8_t *pdata = (uint8_t *)(SMessage->DATA);
 
 	SMessage->HEADER = 0x5C;
-
 	SMessage->TYPE = RMessage->TYPE;
-
 	memcpy(SMessage->SIGN, RMessage->SIGN, 4);
 
 	for(temp_count=0,i=0;(temp_count<4)&&(i<8);temp_count++,i=i+2)
@@ -1005,13 +970,11 @@ void App_return_device_info( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef 
 
 void App_check_24g_attendence( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage )
 {
-	uint8_t temp_count = 0,i = 0,j=0;
+	uint8_t j=0;
 	uint8_t *pdata = (uint8_t *)(SMessage->DATA);
 
 	SMessage->HEADER = 0x5C;
-
 	SMessage->TYPE = RMessage->TYPE;
-
 	memcpy(SMessage->SIGN, RMessage->SIGN, 4);
 
 	if( clicker_set.N_24G_ATTEND & 0x80 )

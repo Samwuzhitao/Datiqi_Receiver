@@ -152,7 +152,7 @@ uint8_t get_rf_retransmit_status(void);
 void whitelist_checktable_or(uint8_t table1, uint8_t table2);
 void whitelist_checktable_and(uint8_t table1, uint8_t table2, uint8_t table);
 void clicker_send_data_statistics( uint8_t send_data_status, uint8_t uidpos );
-bool checkout_online_uids(uint8_t src_table, uint8_t check_table, uint8_t mode, uint8_t *puid,uint8_t *len);
+uint8_t checkout_online_uids(uint8_t src_table, uint8_t check_table, uint8_t mode, uint8_t *puid,uint8_t *len);
 uint8_t spi_process_revice_data( void );
 void send_data_result( uint8_t status );
 void get_retransmit_messsage( uint8_t status );

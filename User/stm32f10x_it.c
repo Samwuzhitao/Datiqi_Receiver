@@ -30,7 +30,7 @@ uint32_t clicker_test_printf_flg = 0;
 Uart_MessageTypeDef uart_irq_revice_massage;
 static uint32_t uart_rx_timeout = 0;
 
-static bool     flag_uart_rxing = false;
+static uint8_t  flag_uart_rxing = 0;
 static uint8_t  uart_status     = UartHEADER;
 
 // send part
@@ -88,7 +88,7 @@ void uart_revice_data_state_mechine( uint8_t data )
 					{
 						uart_irq_revice_massage.HEADER = data;
 						uart_status =  UartTYPE;
-						flag_uart_rxing = true;
+						flag_uart_rxing = 1;
 					}
 				}
 				break;
@@ -121,7 +121,7 @@ void uart_revice_data_state_mechine( uint8_t data )
 						uart_status =  UartHEADER;
 						/* 清除 uart_irq_revice_massage 接收信息 */
 						uart_clear_message(&uart_irq_revice_massage);
-						flag_uart_rxing = false;
+						flag_uart_rxing = 0;
 					}
 					else if(uart_irq_revice_massage.LEN > 0)	//  DATA不为空
 					{
@@ -165,7 +165,7 @@ void uart_revice_data_state_mechine( uint8_t data )
 								{
 									serial_ringbuffer_write_data(REVICE_RINGBUFFER,&uart_irq_revice_massage);
 								}
-							  flag_uart_rxing = false;
+							  flag_uart_rxing = 0;
 								uart_status = UartHEADER;
 								uart_clear_message(&uart_irq_revice_massage);
 						}
@@ -178,7 +178,7 @@ void uart_revice_data_state_mechine( uint8_t data )
 					{
 						uart_status = UartHEADER;
 						uart_clear_message(&uart_irq_revice_massage);
-						flag_uart_rxing = false;
+						flag_uart_rxing = 0;
 					}
 				}
 				break;
@@ -403,7 +403,7 @@ void SysTick_Handler(void)
 		if(uart_rx_timeout>5)										//5ms超时后重新开始接收
 		{
 			uart_clear_message(&uart_irq_revice_massage);
-			flag_uart_rxing = false;
+			flag_uart_rxing = 0;
 			uart_status = UartHEADER;
 		}
 	}
@@ -449,7 +449,6 @@ void USART1pos_IRQHandler(void)
 	}
 }
 
-uint8_t irq_flag;
 void NRF1_RFIRQ_EXTI_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(NRF1_EXTI_LINE_RFIRQ) != RESET)
@@ -457,7 +456,7 @@ void NRF1_RFIRQ_EXTI_IRQHandler(void)
 		EXTI_ClearITPendingBit(NRF1_EXTI_LINE_RFIRQ);
 
 		/* 读取数据 */
-		uesb_nrf_get_irq_flags(SPI1, &irq_flag, &nrf_data.rlen, nrf_data.rbuf);
+		bsp_rf_rx_data( SPI1, &nrf_data.rlen, nrf_data.rbuf );
 		/* 进行 UID 校验,判断是否发送给自己的数据 */
 		if( *(nrf_data.rbuf+1) == nrf_data.jsq_uid[0] &&
 			  *(nrf_data.rbuf+2) == nrf_data.jsq_uid[1] &&

@@ -23,9 +23,6 @@ uint8_t clicker_send_data_status = 0;
 static uint8_t pre_status = 0;
 static uint8_t sum_clicker_count = 0;
 
-extern nrf_communication_t nrf_data;
-extern uint16_t list_tcb_table[16][8];
-
 extern Uart_MessageTypeDef backup_massage;
 extern uint8_t sum_clicker_count;
 /* 统计与重发过程所使用变量 */
@@ -49,8 +46,6 @@ static uint8_t after_retransmit_status;
 static message_tcb_tydef    message_tcb ;
 static retransmit_tcb_tydef retransmit_tcb;
 static Uart_MessageTypeDef  revice_lost_massage,revice_ok_massage;
-extern WhiteList_Typedef    wl;
-extern Revicer_Typedef      revicer;
 
 void retransmit_env_init( void );
 /******************************************************************************
@@ -379,7 +374,7 @@ uint8_t spi_process_revice_data( void )
 {
 	uint8_t spi_message[255];
 	uint8_t spi_message_type = 0;
-	bool    Is_whitelist_uid = OPERATION_ERR;
+	uint8_t Is_whitelist_uid = OPERATION_ERR;
 	uint8_t uidpos = 0xFF;
 	uint8_t clicker_send_data_status = 0;
 
@@ -405,16 +400,6 @@ uint8_t spi_process_revice_data( void )
 		{
 			/* 检索白名单 */
 			Is_whitelist_uid = search_uid_in_white_list(spi_message+5,&uidpos);
-
-			if(wl.uids[uidpos].use == 0)
-			{
-				wl.uids[uidpos].use = 1;
-				wl.uids[uidpos].firstrev = 1;
-			}
-			else
-			{
-				wl.uids[uidpos].firstrev = 0;
-			}
 
 			/* 白名单开关状态 */
 			if(wl.switch_status == OFF)
@@ -504,30 +489,6 @@ uint8_t spi_process_revice_data( void )
 							}
 						}
 					}
-
-					/* 重复接收的数据，返回包号和上次一样的*/
-					if(wl.uids[uidpos].rev_num != spi_message[10])
-					{
-						/* 统计丢包 */
-						if( wl.uids[uidpos].use == 1 )
-						{
-							if(wl.uids[uidpos].firstrev == 0)
-							{
-								if( spi_message[10] > wl.uids[uidpos].rev_num)
-									wl.uids[uidpos].lost_package_num += spi_message[10] - wl.uids[uidpos].rev_num -1 ;
-
-								if( spi_message[10] < wl.uids[uidpos].rev_num )
-									wl.uids[uidpos].lost_package_num += spi_message[10] + 255 - wl.uids[uidpos].rev_num ;
-							}
-							else
-							{
-								wl.uids[uidpos].lost_package_num = 0;
-							}
-
-  						/* 统计收到包数 */
-							wl.uids[uidpos].recv_package_num++;
-						}
-					}
 				}
 				else
 				{
@@ -563,7 +524,7 @@ uint8_t spi_process_revice_data( void )
   Return:
   Others:None
 ******************************************************************************/
-bool checkout_online_uids(uint8_t src_table, uint8_t check_table,
+uint8_t checkout_online_uids(uint8_t src_table, uint8_t check_table,
 	                        uint8_t mode, uint8_t *buffer,uint8_t *len)
 {
 	uint8_t i;
