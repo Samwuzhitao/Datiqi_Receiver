@@ -88,8 +88,8 @@ const static json_item_typedef import_item_list[] = {
 {"over",           sizeof("over"),           0xFF}
 };
 
-static void serial_send_data_to_pc(void);
-static void serial_cmd_process(void);
+static void uart_update_answers(void);
+static void uart_cmd_decode(void);
 void exchange_json_format( char *out, char old_format, char new_format);
 
 /******************************************************************************
@@ -100,7 +100,7 @@ void exchange_json_format( char *out, char old_format, char new_format);
   Return:None
   Others:None
 ******************************************************************************/
-void serial_cmd_process(void)
+void uart_cmd_decode(void)
 {
 	/* 提取中断缓存数据到 */
 	uint8_t temp_rbuf[30];
@@ -231,81 +231,25 @@ void exchange_json_format( char *out, char old_format, char new_format)
 void App_seirial_cmd_process(void)
 {
 	/* send process data to pc */
-	serial_send_data_to_pc();
+	uart_update_answers();
 
 	/* serial cmd process */
-	serial_cmd_process();
+	uart_cmd_decode();
+
+	/* enable interrupt Start send data*/
+	if( BUF_EMPTY != buffer_get_buffer_status(PRINT_BUF) )
+		USART_ITConfig( USART1pos, USART_IT_TXE, ENABLE );
 }
-
-void Parse_time_to_str( char *str )
-{
-	char* pdata = str;
-	char str1[10];
-	/*system_rtc_timer:year*/
-	memset(str1,0,4);
-	sprintf(str1, "%04d" , system_rtc_timer.year);
-	memcpy(pdata,str1,4);
-	pdata = pdata + 4;
-	*pdata = '-';
-	pdata++;
-
-	/*system_rtc_timer:mon*/
-	memset(str1,0,4);
-	sprintf(str1, "%02d" , system_rtc_timer.mon);
-	memcpy(pdata,str1,2);
-	pdata = pdata + 2;
-	*pdata  = '-';
-	pdata++;
-
-	/*system_rtc_timer:date*/
-	memset(str1,0,4);
-	sprintf(str1, "%02d" , system_rtc_timer.date);
-	memcpy(pdata,str1,2);
-	pdata = pdata + 2;
-	*pdata  = ' ';
-	pdata++;
-
-	/*system_rtc_timer:hour*/
-	memset(str1,0,4);
-	sprintf(str1, "%02d" , system_rtc_timer.hour);
-	memcpy(pdata,str1,2);
-	pdata = pdata + 2;
-	*pdata  = ':';
-	pdata++;
-
-	/*system_rtc_timer:min*/
-	memset(str1,0,4);
-	sprintf(str1, "%02d" , system_rtc_timer.min);
-	memcpy(pdata,str1,2);
-	pdata = pdata + 2;
-	*pdata  = ':';
-	pdata++;
-
-	/*system_rtc_timer:sec*/
-	memset(str1,0,4);
-	sprintf(str1, "%02d" , system_rtc_timer.sec);
-	memcpy(pdata,str1,2);
-	pdata = pdata + 2;
-	*pdata  = ':';
-	pdata++;
-	
-	/*system_rtc_timer:ms*/
-	memset(str1,0,5);
-	sprintf(str1, "%03d" , system_rtc_timer.ms);
-	memcpy(pdata,str1,3);
-	pdata = pdata + 3;
-}
-
 
 /******************************************************************************
-  Function:serial_send_data_to_pc
+  Function:uart_update_answers
   Description:
 		串口发送指令函数
   Input :None
   Return:None
   Others:None
 ******************************************************************************/
-static void serial_send_data_to_pc(void)
+static void uart_update_answers(void)
 {
 	static uint8_t  spi_message[255];
 	static uint8_t  Cmdtype;
@@ -367,17 +311,17 @@ static void serial_send_data_to_pc(void)
 	{
 		if(( Cmdtype == 0x10 ) && ( wl.start == ON ))
 		{
-			uint8_t ClickerAnswerTime[CLICKER_TIMER_STR_LEN];
 			uint8_t  raise_sign = 0;
-	
+
 			raise_sign  = *(spi_message+14+spi_message[14]+2+1);
 			b_print("{\r\n");
 			b_print("  \"fun\": \"update_answer_list\",\r\n");
 			b_print("  \"card_id\": \"%010u\",\r\n", *(uint32_t *)( wl.uids[uidpos].uid) );
 			b_print("  \"rssi\": \"-%d\",\r\n", wl.uids[uidpos].rssi );
-			memset( ClickerAnswerTime, 0x00,CLICKER_TIMER_STR_LEN );
-			Parse_time_to_str((char *)ClickerAnswerTime);
-			b_print("  \"update_time\": \"%s\",\r\n",(char *) ClickerAnswerTime );
+			b_print("  \"update_time\": \"%04d-%02d-%02d %02d:%02d:%02d:%03d\",\r\n",
+				system_rtc_timer.year, system_rtc_timer.mon, system_rtc_timer.date, 
+				system_rtc_timer.hour, system_rtc_timer.min, system_rtc_timer.sec, 
+				system_rtc_timer.ms);
 			b_print("  \"raise_hand\": \"%d\",\r\n", (raise_sign & 0x01) ? 1: 0 );
 			b_print("  \"attendance\": \"%d\",\r\n", (raise_sign & 0x02) ? 1: 0 );
 			b_print("  \"answers\": [\r\n");
@@ -563,12 +507,6 @@ static void serial_send_data_to_pc(void)
 			Cmdtype     = 0;
 		}
 	}
-
-//	if((uart_sen_status.get_status(&(uart_sen_status.state))) == 0)
-//	{
-//		/* enable interrupt Start send data*/
-//		USART_ITConfig(USART1pos, USART_IT_TXE, ENABLE);
-//  }
 }
 
 
@@ -662,13 +600,9 @@ void serial_cmd_get_device_no(const cJSON *object)
 		if( is_pos_use == 1 )
 		{
 			count++;
-			b_print("    {");
-			memset(str,0,20);
-			sprintf(str, "%d" , i);
-			b_print("  \"upos\": \"%s\",", str );
-			memset(str,0,20);
-			sprintf(str, "%010u" , *(uint32_t *)( wl.uids[i].uid));
-			b_print("  \"uid\": \"%s\"", str );
+			b_print("    {");;
+			b_print("  \"upos\": \"%d\",", i );
+			b_print("  \"uid\": \"%010u\"", *(uint32_t *)( wl.uids[i].uid) );
 			if( count < wl.len )
 				b_print(" },\r\n");
 			else

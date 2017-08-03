@@ -281,7 +281,7 @@ void print_write_data_to_buffer( char *str, uint8_t len )
   Return:
   Others:None
 ******************************************************************************/
-void print_read_data_to_buffer( uint8_t *str ,uint8_t size)
+uint8_t print_read_data_to_buffer( uint8_t *str ,uint8_t size)
 {
 	uint8_t Len, *pdata, i;
 
@@ -296,6 +296,7 @@ void print_read_data_to_buffer( uint8_t *str ,uint8_t size)
 
 	update_bottom(PRINT_BUF, Len);
 	update_read_status(PRINT_BUF);
+	return Len;
 }
 
 /**************************************END OF FILE****************************/

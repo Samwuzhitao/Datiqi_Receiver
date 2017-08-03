@@ -22,7 +22,7 @@
 
 #define PACKETSIZE           (UART_NBUF+9)
 #define SPI_RBUF_SIZE        (1024*5)
-#define PRINT_RBUF_SIZE      (1)
+#define PRINT_RBUF_SIZE      (1024*10)
 #define BUF_NUM              (3)
 
 
@@ -48,5 +48,5 @@ uint8_t serial_ringbuffer_get_usage_rate(uint8_t sel);
 void spi_read_data_from_buffer( uint8_t sel,uint8_t SpiMessage[] );
 void spi_write_data_to_buffer( uint8_t sel, uint8_t SpiMessage[] );
 void print_write_data_to_buffer( char *str, uint8_t len );
-void print_read_data_to_buffer( uint8_t *str ,uint8_t size);
+uint8_t print_read_data_to_buffer( uint8_t *str ,uint8_t size);
 #endif

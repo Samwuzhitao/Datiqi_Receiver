@@ -53,5 +53,6 @@ void b_print(const char *fmt, ...)
 	if( *pdata == '\0' )
 		str[r_index] = '\0';
 #endif
-	printf("%s",str);		                                                       
+	print_write_data_to_buffer( str, r_index );
+	
 }

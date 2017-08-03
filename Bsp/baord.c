@@ -450,7 +450,7 @@ uint8_t spi_set_cpu_rx_signal_ch( uint8_t rx_ch )
 
 	uint16_t data = rx_ch;
 	cpu_spi_cmd_typedef spi_cmd_w,spi_cmd_r;
-	uint8_t *pdata,i;
+	uint8_t *pdata;
 	
 	/* ?????FEE */
 	EE_WriteVariable(CPU_RX_CH_POS_OF_FEE,data);
@@ -525,7 +525,7 @@ uint8_t spi_set_cpu_tx_signal_ch( uint8_t tx_ch )
 	
 	uint16_t data = tx_ch;
 	cpu_spi_cmd_typedef spi_cmd_w,spi_cmd_r;
-	uint8_t *pdata,i,retval[sizeof(cpu_spi_cmd_typedef)];
+	uint8_t *pdata,retval[sizeof(cpu_spi_cmd_typedef)];
 
 	EE_WriteVariable(CPU_TX_CH_POS_OF_FEE,data);
 

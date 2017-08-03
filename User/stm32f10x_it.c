@@ -322,10 +322,44 @@ void USART1pos_IRQHandler(void)
 	if(USART_GetITStatus(USART1pos, USART_IT_RXNE) != RESET)
 	{
 	  uart_temp = USART_ReceiveData(USART1pos);
-
 		/* store it to rbuf */
 		irq_buf_write( uart_temp );
-//			rbuf_timer = 0;
+	}
+
+	if(USART_GetITStatus(USART1pos, USART_IT_TXE) != RESET)
+	{
+		static uint8_t uart_tx_cnt = 0, uart_tx_status = 0 ,uart_cnt;
+		static uint8_t *pdata;
+		static uint8_t sbuf[100];
+
+		switch( uart_tx_status )
+		{
+			case 0:
+				if( BUF_EMPTY == buffer_get_buffer_status( PRINT_BUF ))
+				{
+					USART_ITConfig(USART1pos,USART_IT_TXE,DISABLE);
+					return;
+				}
+				else
+				{
+					uart_tx_cnt = print_read_data_to_buffer( sbuf, 100);
+					uart_cnt = uart_tx_cnt;
+					pdata = (uint8_t *)(&sbuf);
+					uart_tx_status = 1;
+				}
+				break;
+			case 1:
+				USART_SendData(USART1pos,*pdata);
+				uart_tx_cnt--;
+				pdata++;
+				if( uart_tx_cnt == 0 )
+				{
+					memset(sbuf,0,uart_cnt);
+					uart_tx_status = 0;
+				}
+				break;
+			default: break;
+		}
 	}
 
 }
@@ -355,7 +389,8 @@ void NRF1_RFIRQ_EXTI_IRQHandler(void)
 				*(nrf_data.rbuf+3) == 0x00 &&
 				*(nrf_data.rbuf+4) == 0x00 ))
 		{
-			if(BUF_FULL != buffer_get_buffer_status(SPI_RBUF))
+			if((BUF_FULL != buffer_get_buffer_status(SPI_RBUF)) && 
+				 (BUF_FULL != buffer_get_buffer_status(UART_RBUF)))
 			{
 				spi_write_data_to_buffer(SPI_RBUF,nrf_data.rbuf);
 			}
