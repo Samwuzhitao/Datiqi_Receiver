@@ -521,7 +521,7 @@ void App_card_process(void)
 //			wl.uids[write_uid_pos].uid[0],wl.uids[write_uid_pos].uid[1],
 //			wl.uids[write_uid_pos].uid[2],wl.uids[write_uid_pos].uid[3]);
 				sprintf(str, "%010u" , *(uint32_t *)( wl.uids[write_uid_pos].uid));
-				b_print("  \"card_id\": \"[%03d] %s\",\r\n",write_uid_pos,str);
+				b_print("  \"card_id\": \"%s\",\r\n",str);
 				if( wl.is_printf_clear_uid == 1 )
 				{
 					wl.is_printf_clear_uid = 0;
