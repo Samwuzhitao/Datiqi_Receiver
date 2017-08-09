@@ -132,6 +132,7 @@ int main(void)
 				case '2':
 				{
 					printf("Start program execution......\r\n");
+					__set_PRIMASK(1);
 					if (((*(__IO uint32_t*)APPLICATION_ADDRESS) & 0x2FFE0000 ) == 0x20000000)
 					{
 						/* Jump to user application */
