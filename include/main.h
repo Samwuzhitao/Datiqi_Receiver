@@ -26,6 +26,9 @@
 #include "whitelist.h"
 #include "ringbuffer.h"
 
+#include "rf_link_protocol.h"
+#include "spi_link_protocol.h"
+
 typedef struct 
 {
 	uint8_t 			tx_len;			  					//2.4G·¢ËÍ³¤¶È

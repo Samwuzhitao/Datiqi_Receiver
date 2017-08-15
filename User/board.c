@@ -16,7 +16,6 @@
 #include "app_card_process.h"
 
 /* Private variables ---------------------------------------------------------*/
-spi_cmd_type_t 			spi_cmd;
 nrf_communication_t	nrf_data;
 uint8_t             jsq_uid[8];
 bool 						    gbf_hse_setup_fail = FALSE;
@@ -75,41 +74,41 @@ void nrf1_spi_init(void)
 	RCC_APB1PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);  
 	
 	/* Configure SPI_MISO Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_MISO_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_MISO_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF_PP;
-	GPIO_Init(NRF1_SPI_MISO_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_MISO_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_MOSI Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_MOSI_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_MOSI_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF_PP;
-	GPIO_Init(NRF1_SPI_MOSI_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_MOSI_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_SCK Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_SCK_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_SCK_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF_PP;
-	GPIO_Init(NRF1_SPI_SCK_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_SCK_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_CSN Pin */								//CSN ÅäÖÃ
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_CSN_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_CSN_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_Init(NRF1_SPI_CSN_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_CSN_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_CE Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_CE_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_CE_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_Init(NRF1_SPI_CE_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_CE_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_IRQ Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_IRQ_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_IRQ_PIN;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(NRF1_SPI_IRQ_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_IRQ_PORT, &GPIO_InitStructure);
 
-	/* NRF1_SPIÏà¹Ø²ÎÊýÅäÖÃ */
+	/* NRF_RX_SPIÏà¹Ø²ÎÊýÅäÖÃ */
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
 	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
@@ -126,24 +125,24 @@ void nrf1_spi_init(void)
 	SPI_Init(SPI1, &SPI_InitStructure);
 
   /* Connect EXTI5 Line to PC.05 pin */
-  GPIO_EXTILineConfig(NRF1_RFIRQ_PortSource, GPIO_PinSource5);
+  GPIO_EXTILineConfig(NRF_RX_RFIRQ_PortSource, GPIO_PinSource5);
 	
-	EXTI_InitStructure.EXTI_Line    = NRF1_EXTI_LINE_RFIRQ;
+	EXTI_InitStructure.EXTI_Line    = NRF_RX_EXTI_LINE_RFIRQ;
 	EXTI_InitStructure.EXTI_Mode    = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&EXTI_InitStructure);
 
-	/* NRF1_SPIÖÐ¶ÏÅäÖÃ */
+	/* NRF_RX_SPIÖÐ¶ÏÅäÖÃ */
 	NVIC_PriorityGroupConfig(SYSTEM_MVIC_GROUP_SET);
-	NVIC_InitStructure.NVIC_IRQChannel = NRF1_RFIRQ_EXTI_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NRF1_PREEMPTION_PRIORITY;
+	NVIC_InitStructure.NVIC_IRQChannel = NRF_RX_RFIRQ_EXTI_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NRF_RX_PREEMPTION_PRIORITY;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = NRF_SUB_PRIORITY;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 
 	SPI_Cmd(SPI1, ENABLE);
-	NRF1_CSN_HIGH();		
+	NRF_RX_CSN_HIGH();		
 }
 
 void nrf2_spi_init(void)
@@ -174,23 +173,23 @@ void nrf2_spi_init(void)
 	GPIO_Init(NRF2_SPI_SCK_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_CSN Pin */								//CSN ÅäÖÃ
-	GPIO_InitStructure.GPIO_Pin   = NRF2_SPI_CSN_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_TX_SPI_CSN_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_Init(NRF2_SPI_CSN_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_TX_SPI_CSN_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_CE Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF2_SPI_CE_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_TX_SPI_CE_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_Init(NRF2_SPI_CE_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_TX_SPI_CE_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_IRQ Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF2_SPI_IRQ_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_TX_SPI_IRQ_PIN;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(NRF2_SPI_IRQ_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_TX_SPI_IRQ_PORT, &GPIO_InitStructure);
 
-	/* NRF2_SPIÏà¹Ø²ÎÊýÅäÖÃ */
+	/* NRF_TX_SPIÏà¹Ø²ÎÊýÅäÖÃ */
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
 	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
@@ -207,7 +206,7 @@ void nrf2_spi_init(void)
 	SPI_Init(SPI2, &SPI_InitStructure);
 
 	SPI_Cmd(SPI2, ENABLE);
-	NRF2_CSN_HIGH();		
+	NRF_TX_CSN_HIGH();		
 }
 #endif
 
@@ -218,10 +217,10 @@ void nrf1_rst_init(void)
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 
 	/* Configure RST Pin */								//RST ??
-	GPIO_InitStructure.GPIO_Pin   = NRF1_RST_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_RST_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_Init(NRF1_RST_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_RST_PORT, &GPIO_InitStructure);
 }
 
 void nrf2_rst_init(void)
@@ -231,10 +230,10 @@ void nrf2_rst_init(void)
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 
 	/* Configure RST Pin */								//RST ??
-	GPIO_InitStructure.GPIO_Pin   = NRF2_RST_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_TX_RST_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_Init(NRF2_RST_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_TX_RST_PORT, &GPIO_InitStructure);
 }
 
 void nrf1_rst_deinit()
@@ -243,9 +242,9 @@ void nrf1_rst_deinit()
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 
 	/* Configure RST Pin */								//RST ??
-	GPIO_InitStructure.GPIO_Pin   = NRF1_RST_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_RST_PIN;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(NRF1_RST_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_RST_PORT, &GPIO_InitStructure);
 }
 
 void nrf2_rst_deinit()
@@ -255,9 +254,9 @@ void nrf2_rst_deinit()
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 
 	/* Configure RST Pin */								//RST ??
-	GPIO_InitStructure.GPIO_Pin   = NRF2_RST_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_TX_RST_PIN;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(NRF2_RST_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_TX_RST_PORT, &GPIO_InitStructure);
 }
 
 void nrf1_spi_init(void)
@@ -271,41 +270,41 @@ void nrf1_spi_init(void)
 	RCC_APB1PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);  
 	
 	/* Configure SPI_MISO Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_MISO_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_MISO_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF_PP;
-	GPIO_Init(NRF1_SPI_MISO_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_MISO_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_MOSI Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_MOSI_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_MOSI_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF_PP;
-	GPIO_Init(NRF1_SPI_MOSI_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_MOSI_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_SCK Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_SCK_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_SCK_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF_PP;
-	GPIO_Init(NRF1_SPI_SCK_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_SCK_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_CSN Pin */								//CSN ??
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_CSN_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_CSN_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_Init(NRF1_SPI_CSN_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_CSN_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_CE Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_CE_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_CE_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_Init(NRF1_SPI_CE_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_CE_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_IRQ Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF1_SPI_IRQ_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_RX_SPI_IRQ_PIN;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(NRF1_SPI_IRQ_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_RX_SPI_IRQ_PORT, &GPIO_InitStructure);
 
-	/* NRF1_SPI?????? */
+	/* NRF_RX_SPI?????? */
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
 	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
@@ -322,32 +321,34 @@ void nrf1_spi_init(void)
 	SPI_Init(SPI1, &SPI_InitStructure);
 
   /* Connect EXTI5 Line to PC.05 pin */
-  GPIO_EXTILineConfig(NRF1_RFIRQ_PortSource, GPIO_PinSource5);
+  GPIO_EXTILineConfig(NRF_RX_RFIRQ_PortSource, GPIO_PinSource5);
 	
-	EXTI_InitStructure.EXTI_Line    = NRF1_EXTI_LINE_RFIRQ;
+	EXTI_InitStructure.EXTI_Line    = NRF_RX_EXTI_LINE_RFIRQ;
 	EXTI_InitStructure.EXTI_Mode    = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&EXTI_InitStructure);
 
-	/* NRF1_SPI???? */
+	/* NRF_RX_SPI???? */
 	NVIC_PriorityGroupConfig(SYSTEM_MVIC_GROUP_SET);
-	NVIC_InitStructure.NVIC_IRQChannel = NRF1_RFIRQ_EXTI_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NRF1_PREEMPTION_PRIORITY;
+	NVIC_InitStructure.NVIC_IRQChannel = NRF_RX_RFIRQ_EXTI_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NRF_RX_PREEMPTION_PRIORITY;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = NRF_SUB_PRIORITY;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 
 	SPI_Cmd(SPI1, ENABLE);
-	NRF1_CSN_HIGH();
+	NRF_RX_CSN_HIGH();
 	nrf1_rst_init();
-	NRF1_RST_HIGH();	
+	NRF_RX_RST_HIGH();	
 }
 
 void nrf2_spi_init(void)
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
 	SPI_InitTypeDef  SPI_InitStructure;
+	EXTI_InitTypeDef EXTI_InitStructure;
+	NVIC_InitTypeDef NVIC_InitStructure;
 
 	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable,ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC | \
@@ -355,41 +356,41 @@ void nrf2_spi_init(void)
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);      
 	
 	/* Configure SPI_MISO Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF2_SPI_MISO_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_TX_SPI_MISO_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF_PP;
-	GPIO_Init(NRF2_SPI_MISO_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_TX_SPI_MISO_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_MOSI Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF2_SPI_MOSI_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_TX_SPI_MOSI_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF_PP;
-	GPIO_Init(NRF2_SPI_MOSI_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_TX_SPI_MOSI_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_SCK Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF2_SPI_SCK_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_TX_SPI_SCK_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF_PP;
-	GPIO_Init(NRF2_SPI_SCK_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_TX_SPI_SCK_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_CSN Pin */								//CSN ??
-	GPIO_InitStructure.GPIO_Pin   = NRF2_SPI_CSN_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_TX_SPI_CSN_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_Init(NRF2_SPI_CSN_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_TX_SPI_CSN_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_CE Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF2_SPI_CE_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_TX_SPI_CE_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
-	GPIO_Init(NRF2_SPI_CE_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_TX_SPI_CE_PORT, &GPIO_InitStructure);
 
 	/* Configure SPI_IRQ Pin */
-	GPIO_InitStructure.GPIO_Pin   = NRF2_SPI_IRQ_PIN;
+	GPIO_InitStructure.GPIO_Pin   = NRF_TX_SPI_IRQ_PIN;
 	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN_FLOATING;
-	GPIO_Init(NRF2_SPI_IRQ_PORT, &GPIO_InitStructure);
+	GPIO_Init(NRF_TX_SPI_IRQ_PORT, &GPIO_InitStructure);
 
-	/* NRF2_SPI?????? */
+	/* NRF_TX_SPI?????? */
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
 	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
@@ -405,10 +406,26 @@ void nrf2_spi_init(void)
 
 	SPI_Init(SPI3, &SPI_InitStructure);
 
+  /* Connect EXTI2 Line to PD.02 pin */
+  GPIO_EXTILineConfig(NRF_TX_RFIRQ_PortSource, GPIO_PinSource2);
+	EXTI_InitStructure.EXTI_Line    = NRF_TX_EXTI_LINE_RFIRQ;
+	EXTI_InitStructure.EXTI_Mode    = EXTI_Mode_Interrupt;
+	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
+	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+	EXTI_Init(&EXTI_InitStructure);
+
+	/* NRF_RX_SPI???? */
+	NVIC_PriorityGroupConfig(SYSTEM_MVIC_GROUP_SET);
+	NVIC_InitStructure.NVIC_IRQChannel = NRF_TX_RFIRQ_EXTI_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NRF_TX_PREEMPTION_PRIORITY;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = NRF_SUB_PRIORITY;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+	
 	SPI_Cmd(SPI3, ENABLE);
-	NRF2_CSN_HIGH();
+	NRF_TX_CSN_HIGH();
 	nrf2_rst_init();
-	NRF2_RST_HIGH();
+	NRF_TX_RST_HIGH();
 }
 #endif
 
@@ -477,7 +494,7 @@ void nrf51822_spi_init(void)
 	/* SPIÖÐ¶ÏÅäÖÃ */
 	NVIC_PriorityGroupConfig(SYSTEM_MVIC_GROUP_SET);
 	NVIC_InitStructure.NVIC_IRQChannel = RFIRQ_EXTI_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NRF1_PREEMPTION_PRIORITY;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NRF_RX_PREEMPTION_PRIORITY;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = NRF_SUB_PRIORITY;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
@@ -485,7 +502,7 @@ void nrf51822_spi_init(void)
 	GPIO_EXTILineConfig(RFIRQ_PortSource, RFIRQ_PinSource);
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
-	EXTI_InitStructure.EXTI_Line = NRF1_EXTI_LINE_RFIRQ;
+	EXTI_InitStructure.EXTI_Line = NRF_RX_EXTI_LINE_RFIRQ;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&EXTI_InitStructure);
 
@@ -504,6 +521,8 @@ void nrf51822_spi_init(void)
 #ifdef ZL_RP551_MAIN_H
 	nrf1_spi_init();
 	nrf2_spi_init();
+	nrf1_rst_deinit();
+	nrf2_rst_deinit();
 #endif
 }
 
@@ -654,6 +673,7 @@ void bsp_board_init(void)
 	sw_timer_init();
 	system_timer_init();
 	send_data_process_timer_init();
+	spi_timer_init();
 	card_timer_init();
 
 	/* 复位并初始化RC500 */
@@ -770,110 +790,8 @@ void SE2431L_TX(void)
 }
 #endif
 
-/* Private functions ---------------------------------------------------------*/
-static uint8_t hal_nrf_rw(SPI_TypeDef* SPIx, uint8_t value)
-{
-	while(SPI_I2S_GetFlagStatus(SPIx, SPI_I2S_FLAG_TXE) == RESET);
-	SPI_I2S_SendData(SPIx, value);
-	while(SPI_I2S_GetFlagStatus(SPIx, SPI_I2S_FLAG_RXNE) == RESET);
-	return(SPI_I2S_ReceiveData(SPIx));
-}
 
-uint8_t bsp_rf_rx_data( SPI_TypeDef* SPIx, uint8_t *buf_len, uint8_t *rbuf )
-{
-	uint8_t data[BUFFER_SIZE_MAX];
-	uint8_t i = 0;
-	uint8_t nop = 0xFF;
 
-	*buf_len = 0;
-	memset(spi_cmd.data, 0xFF, BUFFER_SIZE_MAX);
-	spi_cmd.spi_cmd = UESB_READ_RF_INT_STATUS;
-	spi_cmd.data_len = 0x02;
-	spi_cmd.data[0] = 0xFF;
-	spi_cmd.data[1] = 0xFF;
-
-  /* 开始SPI传输 */
-	//printf("SPI_RX :");
-	NRF1_CSN_LOW();
-	memset(data, 0, BUFFER_SIZE_MAX);
-	for(i=0; i<spi_cmd.data_len+3; i++)
-	{
-		data[i] = hal_nrf_rw( SPIx, nop );
-		//printf(" %02x",data[i]);
-		if( i == 3 && (data[2] & (1<<RX_DR)) && data[3] < BUFFER_SIZE_MAX )
-	  {
-			*buf_len = data[3];
-			spi_cmd.data_len += *buf_len;
-			spi_cmd.data[spi_cmd.data_len] = XOR_Cal((uint8_t *)&spi_cmd.data[3],
-				spi_cmd.data_len - 3);
-		}
-	}
-	/* 关闭SPI传输 */
-	NRF1_CSN_HIGH();
-	//printf("\r\n");
-
-	memcpy(rbuf, &data[4],*buf_len);
-
-	if(data[0] != 0 && data[0] != 0xFF)
-		return 1;
-	else
-		return 0;
-}
-
-uint8_t bsp_rf_tx_data( uint8_t *tbuf, uint8_t len, uint8_t cnt, uint8_t us )
-{
-	uint8_t data[BUFFER_SIZE_MAX];
-	uint16_t i = 0;
-	uint8_t *pdata = NULL;
-
-	spi_cmd.spi_cmd    = UESB_WRITE_TX_PAYLOAD;
-	spi_cmd.data_len   = len+2;
-	spi_cmd.count      = cnt;
-	spi_cmd.delay100us = us;
-
-	memcpy(spi_cmd.data, tbuf, len);
-	spi_cmd.data[spi_cmd.data_len-2] = XOR_Cal((uint8_t *)&spi_cmd,
-		spi_cmd.data_len+2);
-	pdata = (uint8_t *)&spi_cmd;
-
-//	{
-//		uint8_t i;
-//		uint8_t *mdata = tbuf;
-//		printf("TX_DATA:");
-//		for(i=0;i<len;i++)
-//			printf(" %02x",*(mdata+i));
-//		printf("\r\n");
-//	}
-	
-  /* 开始SPI传输 */
-	//printf("SPI_TX :");
-	NRF2_CSN_LOW();
-	memset(data, 0, BUFFER_SIZE_MAX);
-	for(i=0; i<spi_cmd.data_len+3; i++)
-	{
-#ifdef ZL_RP551_MAIN_E
-		data[i] = hal_nrf_rw(SPI1, *(pdata+i));
-#endif
-
-#ifdef ZL_RP551_MAIN_F
-		data[i] = hal_nrf_rw(SPI2, *(pdata+i));
-#endif
-
-#ifdef ZL_RP551_MAIN_H
-		data[i] = hal_nrf_rw(NRF_TX_SPI, *(pdata+i));
-#endif
-		//printf(" %02x",*(pdata+i));
-	}
-	/* 关闭SPI传输 */
-	NRF2_CSN_HIGH();
-	//printf("\r\n");
-
-  /* 若接收到数据校验正确 */
-	if( data[0] != 0 ) 									
-		return 1;
-	else
-		return 0;
-}
 
 /*******************************************************************************
   * @brief  Get stm32 MCU.

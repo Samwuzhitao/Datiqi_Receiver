@@ -23,6 +23,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "app_send_data_process.h"
+
 /* uart global variables */
 
 uint32_t clicker_test_printf_flg = 0;
@@ -449,14 +450,13 @@ void USART1pos_IRQHandler(void)
 	}
 }
 
-void NRF1_RFIRQ_EXTI_IRQHandler(void)
+void NRF_RX_RFIRQ_EXTI_IRQHandler(void)
 {
-	if(EXTI_GetITStatus(NRF1_EXTI_LINE_RFIRQ) != RESET)
+	if(EXTI_GetITStatus(NRF_RX_EXTI_LINE_RFIRQ) != RESET)
 	{
-		EXTI_ClearITPendingBit(NRF1_EXTI_LINE_RFIRQ);
-
+		EXTI_ClearITPendingBit(NRF_RX_EXTI_LINE_RFIRQ);
 		/* 读取数据 */
-		bsp_rf_rx_data( SPI1, &nrf_data.rlen, nrf_data.rbuf );
+		bsp_spi_rx_data( NRF_RX_EXTI_LINE_RFIRQ, &nrf_data.rlen, nrf_data.rbuf );
 		/* 进行 UID 校验,判断是否发送给自己的数据 */
 		if( *(nrf_data.rbuf+1) == nrf_data.jsq_uid[0] &&
 			  *(nrf_data.rbuf+2) == nrf_data.jsq_uid[1] &&
@@ -465,8 +465,9 @@ void NRF1_RFIRQ_EXTI_IRQHandler(void)
 		{
 			if(BUFFERFULL != buffer_get_buffer_status(SPI_IRQ_BUFFER))
 			{
-				uint8_t send_data_status = get_clicker_send_data_status();
-				spi_write_data_to_buffer(SPI_IRQ_BUFFER,nrf_data.rbuf, send_data_status);
+				//uint8_t send_data_status = get_clicker_send_data_status();
+				//spi_write_data_to_buffer( SPI_IRQ_BUFFER,nrf_data.rbuf, send_data_status );
+				
 			}
 			else
 			{
@@ -476,6 +477,34 @@ void NRF1_RFIRQ_EXTI_IRQHandler(void)
 	}
 	ledToggle(LBLUE);
 }
+
+void NRF_TX_RFIRQ_EXTI_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(NRF_TX_EXTI_LINE_RFIRQ) != RESET)
+	{
+		EXTI_ClearITPendingBit(NRF_TX_EXTI_LINE_RFIRQ);
+		/* 读取数据 */
+		bsp_spi_rx_data( NRF_TX_EXTI_LINE_RFIRQ, &nrf_data.rlen, nrf_data.rbuf );
+		/* 进行 UID 校验,判断是否发送给自己的数据 */
+		if( *(nrf_data.rbuf+1) == nrf_data.jsq_uid[0] &&
+			  *(nrf_data.rbuf+2) == nrf_data.jsq_uid[1] &&
+				*(nrf_data.rbuf+3) == nrf_data.jsq_uid[2] &&
+				*(nrf_data.rbuf+4) == nrf_data.jsq_uid[3])
+		{
+			if(BUFFERFULL != buffer_get_buffer_status(SPI_IRQ_BUFFER))
+			{
+				//uint8_t send_data_status = get_clicker_send_data_status();
+				//spi_write_data_to_buffer( SPI_IRQ_BUFFER,nrf_data.rbuf, send_data_status );
+			}
+			else
+			{
+				DEBUG_BUFFER_ACK_LOG("spi irq buffer full \r\n");
+			}
+		}
+	}
+	ledToggle(LBLUE);
+}
+
 
 /**
   * @}

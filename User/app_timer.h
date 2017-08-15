@@ -59,7 +59,7 @@ extern timer_list_typedef timer_list;
 extern Timer_typedef retransmit_timer,systick_timer;
 extern Timer_typedef send_data1_timer,send_data2_timer,send_data3_timer,single_send_data_timer;
 extern Timer_typedef request_data_timer;
-extern Timer_typedef spi_send_data_timer;
+extern Timer_typedef spi_send_data1_timer,spi_send_data2_timer;
 extern Timer_typedef systick_package_timer;
 extern RTC_timer_Typedef system_rtc_timer;
 extern Timer_typedef card_buzzer_timer,card_second_find_timer;

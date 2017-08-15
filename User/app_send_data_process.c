@@ -932,74 +932,6 @@ void retransmit_env_init( void )
 }
 
 /******************************************************************************
-  Function:spi_write_temp_buffer_to_buffer
-  Description:
-		将零时缓存的数据存入到buffer中
-  Input :
-  Return:
-  Others:None
-******************************************************************************/
-void spi_write_temp_buffer_to_buffer()
-{
-	if(BUFFEREMPTY != buffer_get_buffer_status(SPI_IRQ_BUFFER))
-	{
-		uint8_t spi_message[255];
-		memset(spi_message,0,255);
-		spi_read_data_from_buffer( SPI_IRQ_BUFFER, spi_message );
-
-		if(BUFFERFULL != buffer_get_buffer_status(SPI_REVICE_BUFFER))
-		{
-			spi_write_data_to_buffer(SPI_REVICE_BUFFER,spi_message, spi_message[spi_message[14]+17]);
-
-		}
-	}
-
-	if(BUFFERFULL != buffer_get_buffer_status(SPI_REVICE_BUFFER))
-	{
-		if((spi_status_count > 0) && (BUFFEREMPTY == buffer_get_buffer_status(SPI_IRQ_BUFFER)))
-		{
-			spi_write_data_to_buffer(SPI_REVICE_BUFFER,spi_status_buffer[spi_status_read_index],
-			    spi_status_buffer[spi_status_read_index][spi_status_buffer[spi_status_read_index][14]+17]);
-			{
-				#ifdef OPEN_SEND_STATUS_SHOW
-				uint8_t *str,status;
-				status = spi_status_buffer[spi_status_read_index][spi_status_buffer[spi_status_read_index][14]+17];
-				switch( status )
-				{
-					case SEND_IDLE_STATUS:            str = "IDLE_STATUS";            break;
-					case SEND_DATA1_STATUS:           str = "DATA1_STATUS";           break;
-					case SEND_DATA1_UPDATE_STATUS:    str = "DATA1_UPDATE_STATUS";    break;
-					case SEND_DATA2_STATUS:           str = "DATA2_STATUS";           break;
-					case SEND_DATA2_SEND_OVER_STATUS: str = "DATA2_SEND_OVER_STATUS"; break;
-					case SEND_DATA2_UPDATE_STATUS:    str = "DATA2_UPDATE_STATUS";    break;
-					case SEND_DATA3_STATUS:           str = "DATA3_STATUS";           break;
-					case SEND_DATA3_SEND_OVER_STATUS: str = "DATA3_SEND_OVER_STATUS"; break;
-					case SEND_DATA3_UPDATE_STATUS:    str = "DATA3_UPDATE_STATUS";    break;
-					case SEND_DATA4_STATUS:           str = "DATA4_STATUS";           break;
-					case SEND_DATA4_UPDATE_STATUS:    str = "DATA4_UPDATE_STATUS";    break;
-					default:break;
-				}
-				DEBUG_BUFFER_DTATA_LOG("send_status = %s\r\n",str);
-				#endif
-				#ifdef OPEN_SEND_STATUS_MESSAGE_SHOW
-				{
-					int i;
-					DEBUG_BUFFER_DTATA_LOG("%4d %2d read1: ", buffer_get_buffer_status(SPI_REVICE_BUFFER),spi_status_count);
-					for(i=0;i<17;i++)
-					{
-						DEBUG_BUFFER_DTATA_LOG("%2x ",spi_status_buffer[spi_status_read_index][i]);
-					}
-					DEBUG_BUFFER_DTATA_LOG("%2x \r\n",status);
-				}
-				#endif
-			}
-			spi_status_read_index = (spi_status_read_index + 1) % SPI_DATA_IRQ_BUFFER_BLOCK_COUNT;
-			spi_status_count--;
-		}
-	}
-}
-
-/******************************************************************************
   Function:send_data_env_init
   Description:
 		答题器发送处理逻辑函数
@@ -1192,9 +1124,6 @@ void App_clickers_send_data_process( void )
 {
 	uint8_t spi_buffer_status = 0;
 	uint8_t current_status = 0;
-
-	/* 读取spi数据写入到 Buffer */
-	spi_write_temp_buffer_to_buffer();
 
 	/* 获取缓存状态 */
 	spi_buffer_status = spi_process_revice_data();

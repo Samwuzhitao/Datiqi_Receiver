@@ -15,6 +15,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "app_send_data_process.h"
+#include "app_spi_send_data_process.h"
 #include "app_card_process.h"
 #include "app_systick_package_process.h"
 
@@ -54,7 +55,7 @@ void App_card_match( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessag
 void App_start_or_stop_answer( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage );
 void App_setting_24g_attendence( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage );
 void App_check_24g_attendence( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage );
-void App_bootloader_attendence( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage );
+void App_dtq_set( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage );
 
 /******************************************************************************
   Function:App_seirial_cmd_process
@@ -383,7 +384,7 @@ static void serial_cmd_process(void)
 				
 			case 0x50:
 				{
-					if(ReviceMessage.LEN != 0)
+					if(ReviceMessage.LEN != 2)
 					{
 						err_cmd_type = serial_cmd_type;
 						serial_cmd_type = APP_CTR_DATALEN_ERR;
@@ -391,8 +392,9 @@ static void serial_cmd_process(void)
 					}
 					else
 					{
-						App_bootloader_attendence( &ReviceMessage, &SendMessage);
-						serial_cmd_status = APP_SERIAL_CMD_STATUS_IDLE;
+						App_dtq_set( &ReviceMessage, &SendMessage);
+//						serial_cmd_status = APP_SERIAL_CMD_STATUS_IDLE;
+						serial_cmd_status = APP_SERIAL_CMD_STATUS_IGNORE;
 					}
 				}
 				break;
@@ -1322,18 +1324,66 @@ void App_setting_24g_attendence( Uart_MessageTypeDef *RMessage, Uart_MessageType
   Return:
   Others:None
 ******************************************************************************/
-void App_bootloader_attendence( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage )
+void App_dtq_set( Uart_MessageTypeDef *RMessage, Uart_MessageTypeDef *SMessage )
 {
-	typedef  void (*pFunction)(void);
+	nor_buf_t t_conf = RF_TX_CH_DEFAULT_CONF;
+	nor_buf_t r_conf = RF_RX_CH_DEFAULT_CONF;
+	uint8_t   i = 0;
+	uint8_t   result = 0;
+	uint8_t   set_op = RMessage->DATA[0];
+	uint8_t   tx_ch  = RMessage->DATA[1];
 
-	uint32_t JumpAddress;
-	pFunction JumpToBootloader;
-	/* Jump to user application */
-	JumpAddress = *(__IO uint32_t*) (0x8000000 + 4);
-	JumpToBootloader = (pFunction) JumpAddress;
-	/* Initialize user application's Stack Pointer */
-	__set_MSP(*(__IO uint32_t*) 0x8000000);
-	JumpToBootloader();
+	if( set_op == 0x01 )
+	{
+		switch( tx_ch )
+		{
+			case 1: break;
+			case 2:
+				t_conf.t_buf[RF_ADDR_CH] = RF_TX_CH2;
+				r_conf.t_buf[RF_ADDR_CH] = RF_RX_CH2;
+				break;
+			case 3:
+				t_conf.t_buf[RF_ADDR_CH] = RF_TX_CH3;
+				r_conf.t_buf[RF_ADDR_CH] = RF_RX_CH3;
+				break;
+			case 4:
+				t_conf.t_buf[RF_ADDR_CH] = RF_TX_CH4;
+				r_conf.t_buf[RF_ADDR_CH] = RF_RX_CH4;
+				break;
+			case 5:
+				t_conf.t_buf[RF_ADDR_CH] = RF_TX_CH5;
+				r_conf.t_buf[RF_ADDR_CH] = RF_RX_CH5;
+				break;
+			default: result = 1; break;
+		}
+	}
+
+	if( set_op == 0x02 )
+	{
+		switch( tx_ch )
+		{
+			case 1: break;
+			case 2: t_conf.t_buf[RF_ADDR_TX_POWER] = RF_TX_POWER_CH2; break;
+			case 3: t_conf.t_buf[RF_ADDR_TX_POWER] = RF_TX_POWER_CH3; break;
+			case 4: t_conf.t_buf[RF_ADDR_TX_POWER] = RF_TX_POWER_CH4; break;
+			case 5: t_conf.t_buf[RF_ADDR_TX_POWER] = RF_TX_POWER_CH5; break;
+			default: result = 1; break;
+		}
+	}
+
+	if( set_op > 2 )
+		result = 1;
+
+	result |= spi_write_cmd_to_rx( r_conf.t_buf, r_conf.len );
+	result |= spi_write_cmd_to_tx( t_conf.t_buf, t_conf.len );
+
+	SMessage->HEADER = 0x5C;
+	SMessage->TYPE = RMessage->TYPE;
+	memcpy(SMessage->SIGN, RMessage->SIGN, 4);
+	SMessage->LEN = 0x01;
+	SMessage->DATA[i++] = result;
+	SMessage->XOR = XOR_Cal((uint8_t *)(&(SMessage->TYPE)), i+6);
+	SMessage->END = 0xCA;
 }
 
 /******************************************************************************

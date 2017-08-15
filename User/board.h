@@ -11,6 +11,8 @@
 #ifndef _BOARD_H_
 #define _BOARD_H_
 #include "stm32f10x.h"
+#include "rf_link_protocol.h"
+
 /* Defines ------------------------------------------------------------------*/
 //#define OPEN_SILENT_MODE
 #define ENABLE_WATCHDOG					(1)
@@ -39,8 +41,8 @@
 /* Peripheral interrupt preemption set */
 #define UART1_PREEMPTION_PRIORITY     1
 #define UART2_PREEMPTION_PRIORITY     1
-#define NRF1_PREEMPTION_PRIORITY      0
-#define NRF2_PREEMPTION_PRIORITY      1
+#define NRF_RX_PREEMPTION_PRIORITY    0
+#define NRF_TX_PREEMPTION_PRIORITY    1
 #define TIM3_PREEMPTION_PRIORITY      0
 
 /* Peripheral interrupt response set */
@@ -69,11 +71,11 @@
 #define USART2pos_IRQHandler          USART2_IRQHandler
 
 /* nrf configuration define---------------------------------------------------*/
-#define	NRF_TOTAL_DATA_LEN				      (250)				//2.4G数据总长度
+
 #define	NRF_DATA_IS_USEFUL				      (0)
 #define NRF_DATA_IS_ACK				          (1)
 #define NRF_DATA_IS_PRE				          (2)
-#define BUFFER_SIZE_MAX							    (255)
+
 
 /* STATUS register bit define-------------------------------------------------*/
 #define RX_DR                           6     /**< STATUS register bit 6 */
@@ -81,17 +83,6 @@
 #define MAX_RT                          4     /**< STATUS register bit 4 */
 #define TX_FULL                         0     /**< STATUS register bit 0 */
 
-typedef enum {
-  UESB_WRITE_PARAM 				    = 0x80,
-  UESB_FLUSH_TX 					    = 0x81,
-  UESB_FLUSH_RX 					    = 0x82,
-	UESB_WRITE_TX_PAYLOAD 			= 0x83,
-	UESB_WRITE_TX_PAYLOAD_NOACK = 0x84,
-	UESB_READ_RX_PAYLOAD 			  = 0x85,
-	UESB_READ_RF_INT_STATUS 		= 0x86,
-	UESB_CLEAR_RF_INT_STATUS 		= 0x87,
-	UESB_SWITCH_TX_RX	 			    = 0x88,
-} spi_cmd_t;
 
 typedef struct
 {
@@ -105,13 +96,10 @@ typedef struct
 
 typedef struct
 {
-	uint8_t 				spi_cmd;
-	uint8_t					data_len;
-	uint8_t         count;
-	uint8_t         delay100us;
-	uint8_t 				data[BUFFER_SIZE_MAX];
-	uint8_t 				xor;														//为所有数据异或结果
-} spi_cmd_type_t;
+	uint8_t	 len;
+	uint8_t	 t_buf[250];
+}nor_buf_t;
+
 
 //#define ZL_RP551_MAIN_E
 //#define ZL_RP551_MAIN_F
