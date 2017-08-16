@@ -5,9 +5,9 @@
 static uint8_t    sbuf_s = 0;
 static spi_cmd_t  sbuf[SPI_SEND_DATA_BUFFER_COUNT_MAX];
 static uint16_t   sbuf_cnt_w, sbuf_cnt_r, sbuf_cnt;
-static uint8_t    spi_ack_flag = 0, retry_cnt = 0;
-static spi_cmd_t  irq_rbuf[SPI_SEND_DATA_BUFFER_COUNT_MAX];
-static uint16_t   rbuf_cnt_w, rbuf_cnt_r, rbuf_cnt;
+static uint8_t    retry_cnt = 0;
+spi_cmd_t  irq_rbuf[SPI_SEND_DATA_BUFFER_COUNT_MAX];
+uint16_t   irq_rbuf_cnt_w = 0, irq_rbuf_cnt_r = 0, irq_rbuf_cnt = 0;
 /******************************************************************************
   Function:set_spi_status
   Description:
@@ -45,21 +45,19 @@ uint8_t get_spi_status( void )
 ******************************************************************************/
 void spi_rx_data_process( void )
 {
-	if( BUFFEREMPTY != buffer_get_buffer_status(SPI_IRQ_BUFFER) )
+	if( irq_rbuf_cnt > 0 )
 	{
-		uint8_t spi_message[255];
-		memset(spi_message,0,255);
-		spi_read_data_from_buffer( SPI_IRQ_BUFFER, spi_message );
-
-		/* 滤出SPI的ACK之后的数据 */
-		{
-			
-		}
-		
-		if(BUFFERFULL != buffer_get_buffer_status(SPI_REVICE_BUFFER))
-		{
-			//spi_write_data_to_buffer(SPI_REVICE_BUFFER,spi_message, spi_message[spi_message[14]+17]);
-		}
+		uint8_t i, rx_s = 0, rx_cnt = 0;
+		printf("\t rx_buf: ");
+		printf("%02x %02x %02x %02x",                                      \
+			irq_rbuf[irq_rbuf_cnt_r].header, irq_rbuf[irq_rbuf_cnt_r].dev_t, \
+			irq_rbuf[irq_rbuf_cnt_r].cmd, irq_rbuf[irq_rbuf_cnt_r].length);
+		for( i = 0; i < irq_rbuf[irq_rbuf_cnt_r].length; i++ )
+			printf(" %02x", irq_rbuf[irq_rbuf_cnt_r].data[i]);
+		printf(" %02x %02x \r\n",
+			irq_rbuf[irq_rbuf_cnt_r].xor, irq_rbuf[irq_rbuf_cnt_r].end);
+		irq_rbuf_cnt--;
+		irq_rbuf_cnt_r = (irq_rbuf_cnt_r + 1) % SPI_SEND_DATA_BUFFER_COUNT_MAX;
 	}
 }
 
@@ -76,6 +74,8 @@ void spi_tx_data_process(void)
 
 	if( sbuf_s == 2 )
 	{
+		uint8_t spi_ack_flag = 0;
+
 		if( spi_ack_flag == 1 )
 		{
 			sbuf_cnt--;
@@ -112,14 +112,13 @@ void App_spi_send_data_process( void )
 ******************************************************************************/
 void sbuf_s_1_timer_init( void )
 {
-	//sw_clear_timer(&spi_send_data2_timer);
 	DEBUG_SPI_LOG("spi_status = %d\r\n",sbuf_s);
 }
 
 void spi_timer_init( void )
 {
-	sw_create_timer( &spi_send_data1_timer , 500, 1, 2,&(sbuf_s), sbuf_s_1_timer_init );
-	//sw_create_timer( &spi_send_data2_timer , delay1_ms, 2, 3,&(sbuf_s), sbuf_s_1_timer_init );
+    sw_create_timer( &spi_send_data1_timer , 3, 1, 2,&(sbuf_s), sbuf_s_1_timer_init );
+//sw_create_timer( &spi_send_data2_timer , delay1_ms, 2, 3,&(sbuf_s), sbuf_s_1_timer_init );
 }
 
 /******************************************************************************

@@ -77,15 +77,9 @@ void spi_pro_init_pack( spi_cmd_t *spi_scmd )
 	spi_scmd->end    = 0x76;
 }
 
-void spi_pro_copy_pack( spi_cmd_t *spi_rcmd,spi_cmd_t *spi_wcmd )
-{
-	memcpy( (uint8_t *)spi_wcmd, (uint8_t *)spi_wcmd, sizeof(spi_cmd_t) );
-}
-
 uint8_t bsp_spi_rx_data( uint32_t irq, spi_cmd_t *spi_rcmd )
 {
 	uint8_t i    = 0;
-	uint8_t nop  = 0xFF;
 	uint8_t rx_s = 0, rx_cnt = 0;
 	typedef  uint8_t (*spi_get_char)(void);
 	spi_get_char pfun;
@@ -95,13 +89,13 @@ uint8_t bsp_spi_rx_data( uint32_t irq, spi_cmd_t *spi_rcmd )
 
 	if( irq == NRF_RX_EXTI_LINE_RFIRQ )
 	{
-		SPI_DATA_DEBUG("[RX]SPI_RX :");
+		SPI_DATA_DEBUG("[RX]r :");
 		NRF_RX_CSN_LOW();
 		pfun = spi_rx_get_char;
 	}
 	else
 	{
-		SPI_DATA_DEBUG("[TX]SPI_RX :");
+		SPI_DATA_DEBUG("[TX]r :");
 		NRF_TX_CSN_LOW();
 		pfun = spi_tx_get_char;
 	}
@@ -111,55 +105,68 @@ uint8_t bsp_spi_rx_data( uint32_t irq, spi_cmd_t *spi_rcmd )
 		SPI_STATUS_DEBUG("\r\nrx_s:%d ",rx_s);
 		switch(rx_s)
 		{
-			case 0: 
-				spi_rcmd->header = pfun();
-				if(spi_rcmd->header != 0x86)
-					return 1;
-				else
-					rx_s = 1;
+			case 0:
+				{
+					spi_rcmd->header = pfun();
+					if(spi_rcmd->header != 0x86)
+						return 1;
+					else
+						rx_s = 1;
+				}
 				break;
 				
 			case 1:
-				spi_rcmd->dev_t = pfun();
-				if(spi_rcmd->dev_t > 2)
-					return 1;
-				else
-					rx_s = 2;
+				{
+					spi_rcmd->dev_t = pfun();
+					if(spi_rcmd->dev_t > 2)
+						return 1;
+					else
+						rx_s = 2;
+				}
 				break;
 		
 			case 2:
-				spi_rcmd->cmd = pfun();
-				rx_s = 3;
+				{
+					spi_rcmd->cmd = pfun();
+					rx_s = 3;
+				}
 				break;
 
 			case 3:
-				spi_rcmd->length = pfun();
-				rx_s = 4;
-				rx_cnt = 0;
+				{
+					spi_rcmd->length = pfun();
+					rx_s = 4;
+					rx_cnt = 0;
+				}
 				break;	
 
 			case 4:
-				spi_rcmd->data[rx_cnt] = pfun();
-				rx_cnt++;
-				if( rx_cnt >= spi_rcmd->length)
-					rx_s = 5;
+				{
+					spi_rcmd->data[rx_cnt] = pfun();
+					rx_cnt++;
+					if( rx_cnt >= spi_rcmd->length)
+						rx_s = 5;
+				}
 				break;
 
 			case 5:
-				spi_rcmd->xor = pfun();
-				if( spi_rcmd->xor != XOR_Cal((uint8_t *)&spi_rcmd->dev_t,spi_rcmd->length + 3))
-					return 1;
-				else
-					rx_s = 6;
+				{
+					spi_rcmd->xor = pfun();
+					if( spi_rcmd->xor != XOR_Cal((uint8_t *)&spi_rcmd->dev_t,spi_rcmd->length + 3))
+						return 1;
+					else
+						rx_s = 6;
+				}
 				break;
 
 			case 6:
-				spi_rcmd->end = pfun();
-				if( spi_rcmd->end != 0x76)
-					return 1;
-				else
-					rx_s = 0;
-					return 0;
+				{
+					spi_rcmd->end = pfun();
+					if( spi_rcmd->end != 0x76)
+						return 1;
+					else
+						rx_s = 0;
+				}
 				break;
 			default: break;
 		}
@@ -182,13 +189,13 @@ uint8_t bsp_spi_tx_data( spi_cmd_t *spi_scmd )
 
 	if( spi_scmd->dev_t == DEVICE_TX )
 	{
-		SPI_DATA_DEBUG("[TX]SPI_TX :");
+		SPI_DATA_DEBUG("[TX]s :");
 		pfun = spi_tx_put_char;
 		NRF_TX_CSN_LOW();
 	}
 	if( spi_scmd->dev_t == DEVICE_RX )
 	{
-		SPI_DATA_DEBUG("[RX]SPI_TX :");
+		SPI_DATA_DEBUG("[RX]s :");
 		pfun = spi_rx_put_char;
 		NRF_RX_CSN_LOW();
 	}
@@ -198,45 +205,29 @@ uint8_t bsp_spi_tx_data( spi_cmd_t *spi_scmd )
 		SPI_STATUS_DEBUG("\r\ntx_s:%d ",tx_s);
 		switch(tx_s)
 		{
-			case 0: 
-				pfun( spi_scmd->header );
-				tx_s = 1;
-				break;
-
-			case 1:
-				pfun( spi_scmd->dev_t );
-				tx_s = 2;
-				break;
-
-			case 2:
-				pfun( spi_scmd->cmd );
-				tx_s = 3;
-				break;
-
+			case 0: pfun( spi_scmd->header ); tx_s = 1; break;
+			case 1: pfun( spi_scmd->dev_t  ); tx_s = 2; break;
+			case 2: pfun( spi_scmd->cmd    ); tx_s = 3; break;
 			case 3:
-				pfun( spi_scmd->length );
-				if( spi_scmd->length == 0)
-					tx_s = 5;
-				else
-					tx_s = 4;
+				{
+					pfun( spi_scmd->length );
+					if( spi_scmd->length == 0)
+						tx_s = 5;
+					else
+						tx_s = 4;
+				}
 				break;	
-
 			case 4:
-				pfun( spi_scmd->data[tx_cnt] );
-				tx_cnt++;
-				if( tx_cnt == spi_scmd->length)
-					tx_s = 5;
+				{
+					pfun( spi_scmd->data[tx_cnt] );
+					tx_cnt++;
+					if( tx_cnt == spi_scmd->length)
+						tx_s = 5;
+				}
 				break;
-
-			case 5:
-				pfun( spi_scmd->xor );
-				tx_s = 6;
-				break;
-
-			case 6:
-				pfun( spi_scmd->end );
-				tx_s = 0;
-				break;				
+			case 5: pfun( spi_scmd->xor ); tx_s = 6; break;
+			case 6: pfun( spi_scmd->end ); tx_s = 0; break;
+			default: break;
 		}
 	}
 

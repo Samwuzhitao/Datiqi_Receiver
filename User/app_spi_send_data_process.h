@@ -15,6 +15,9 @@
 #define SPI_SEND_DATA_PRE_DELAY        10
 #define SPI_SEND_DATA_BUFFER_COUNT_MAX 4
 
+extern spi_cmd_t  irq_rbuf[SPI_SEND_DATA_BUFFER_COUNT_MAX];
+extern uint16_t   irq_rbuf_cnt_w, irq_rbuf_cnt_r, irq_rbuf_cnt;
+
 void change_spi_send_data_process_status( uint8_t new_status );
 uint8_t get_spi_send_data_process_status( void );
 void App_spi_send_data_process(void);

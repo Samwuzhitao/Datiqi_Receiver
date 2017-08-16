@@ -82,7 +82,6 @@ typedef enum {
 /* Private functions ---------------------------------------------------------*/
 void spi_pro_init_pack( spi_cmd_t *spi_scmd );
 void spi_pro_pack_update_crc( spi_cmd_t *spi_scmd );
-void spi_pro_copy_pack( spi_cmd_t *spi_rcmd,spi_cmd_t *spi_wcmd );
 
 uint8_t bsp_spi_rx_data( uint32_t irq, spi_cmd_t *spi_rcmd );
 uint8_t bsp_spi_tx_data( spi_cmd_t *spi_scmd );
