@@ -207,23 +207,23 @@ void App_clickers_send_data_process( void )
 	{
 		if( send_data_status == SEND_2S_DATA_STATUS    )
 		{
-			uint8_t status;
+			uint8_t status = 0;
 			static uint8_t err_count = 0;
 
 			if(clicker_set.N_CH_RX == clicker_set.N_CH_TX )
 				clicker_set.N_CH_RX = (clicker_set.N_CH_TX + 2) % 11;
-			status  = spi_set_cpu_tx_signal_ch(clicker_set.N_CH_RX);
-			status |= spi_set_cpu_rx_signal_ch(clicker_set.N_CH_TX);
+//			status  = spi_set_cpu_tx_signal_ch(clicker_set.N_CH_RX);
+//			status |= spi_set_cpu_rx_signal_ch(clicker_set.N_CH_TX);
 
 			if( status != 0 )
 			{
 				nrf1_rst_init();
 				nrf2_rst_init();
-				NRF1_RST_LOW();	
-				NRF2_RST_LOW();	
+				NRF_RX_RST_LOW();	
+				NRF_TX_RST_LOW();	
 				DelayMs(50);
-				NRF1_RST_HIGH();	
-				NRF2_RST_HIGH();
+				NRF_RX_RST_HIGH();	
+				NRF_TX_RST_HIGH();
 				nrf1_rst_deinit();
 				nrf2_rst_deinit();
 				err_count++;

@@ -26,8 +26,8 @@
 /* Peripheral interrupt preemption set */
 #define UART1_PREEMPTION_PRIORITY     1
 #define UART2_PREEMPTION_PRIORITY     1
-#define NRF1_PREEMPTION_PRIORITY      0
-#define NRF2_PREEMPTION_PRIORITY      1
+#define NRF_RX_PREEMPTION_PRIORITY    0
+#define NRF_TX_PREEMPTION_PRIORITY    1
 #define TIM3_PREEMPTION_PRIORITY      0
 
 /* Peripheral interrupt response set */
@@ -46,29 +46,15 @@
 #define USART1pos_IRQn                USART1_IRQn
 #define USART1pos_IRQHandler          USART1_IRQHandler
 
-#define USART2pos                     USART2
-#define USART2pos_GPIO                GPIOA
-#define USART2pos_CLK                 RCC_APB1Periph_USART2
-#define USART2pos_GPIO_CLK            RCC_APB2Periph_GPIOA
-#define USART2pos_RxPin               GPIO_Pin_3
-#define USART2pos_TxPin               GPIO_Pin_2
-#define USART2pos_IRQn                USART2_IRQn
-#define USART2pos_IRQHandler          USART2_IRQHandler
-
-//#define ZL_RP551_MAIN_E
 //#define ZL_RP551_MAIN_F
 //#define ZL_RP551_MAIN_H
 
-#if (!defined (ZL_RP551_MAIN_E) && !defined (ZL_RP551_MAIN_F)) && !defined (ZL_RP551_MAIN_H)
+#if !defined (ZL_RP551_MAIN_F) && !defined (ZL_RP551_MAIN_H)
  #error "Please select board used in your application (in board.h file)"
 #endif
 
-#if (defined (ZL_RP551_MAIN_E) && defined (ZL_RP551_MAIN_F)) && defined (ZL_RP551_MAIN_H)
+#if defined (ZL_RP551_MAIN_F) && defined (ZL_RP551_MAIN_H)
  #error "Please select only one board used in your application (in board.h file)"
-#endif
-
-#ifdef ZL_RP551_MAIN_E
-#include "bsp_rp551_e.h"
 #endif
 
 #ifdef ZL_RP551_MAIN_F
@@ -134,6 +120,13 @@ typedef struct
 	uint8_t end;
 }cpu_spi_cmd_typedef;
 
+
+typedef struct
+{
+	uint8_t	 len;
+	uint8_t	 t_buf[250];
+}nor_buf_t;
+
 extern wl_typedef       wl;
 extern uint8_t dtq_self_inspection_flg;
 
@@ -143,8 +136,6 @@ void systick_timer_init( void );
 uint8_t XOR_Cal(uint8_t *data, uint16_t length);
 void board_init(void);
 void bsp_uart_init(void);
-uint8_t spi_set_cpu_tx_signal_ch( uint8_t tx_ch );
-uint8_t spi_set_cpu_rx_signal_ch( uint8_t rx_ch );
 
 #endif //_BOARD_H_
 

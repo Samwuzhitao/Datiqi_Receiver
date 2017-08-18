@@ -24,6 +24,7 @@
 #include "main.h"
 #include "app_send_data_process.h"
 #include "app_serial_cmd_process.h"
+#include "app_spi_send_data_process.h"
 #include <stdio.h>  
 #include <stdlib.h>  
 #include "cJSON.h"
@@ -364,46 +365,47 @@ void USART1pos_IRQHandler(void)
 
 }
 
-void NRF1_RFIRQ_EXTI_IRQHandler(void)
+void NRF_RX_RFIRQ_EXTI_IRQHandler(void)
 {
-	if(EXTI_GetITStatus(NRF1_EXTI_LINE_RFIRQ) != RESET)
+	if(EXTI_GetITStatus(NRF_RX_EXTI_LINE_RFIRQ) != RESET)
 	{
+		uint8_t rx_err = 0;
+		spi_cmd_t spi_rcmd;
 		/* 读取数据 */
-		spi_read_tx_payload(SPI1, &nrf_data.rlen, nrf_data.rbuf);
-//	{
-//		uint8_t i;
-//		printf("irqrevicebuf:");
-//		for(i=0;i<nrf_data.rlen;i++)
-//		{
-//			printf(" %02x",nrf_data.rbuf[i]);
-//		}
-//		printf("\r\n");
-//	}
+		rx_err = bsp_spi_rx_data( NRF_RX_EXTI_LINE_RFIRQ, &spi_rcmd );
 		/* 进行 UID 校验,判断是否发送给自己的数据 */
-		if((*(nrf_data.rbuf+1) == revicer.uid[0] &&
-			  *(nrf_data.rbuf+2) == revicer.uid[1] &&
-				*(nrf_data.rbuf+3) == revicer.uid[2] &&
-				*(nrf_data.rbuf+4) == revicer.uid[3]) ||
-		   (*(nrf_data.rbuf+1) == 0x00 &&
-			  *(nrf_data.rbuf+2) == 0x00 &&
-				*(nrf_data.rbuf+3) == 0x00 &&
-				*(nrf_data.rbuf+4) == 0x00 ))
+		if(( irq_rbuf_cnt < SPI_SEND_DATA_BUFFER_COUNT_MAX ) && ( rx_err == 0 ))
 		{
-			if((BUF_FULL != buffer_get_buffer_status(SPI_RBUF)) && 
-				 (BUF_FULL != buffer_get_buffer_status(UART_RBUF)))
-			{
-				spi_write_data_to_buffer(SPI_RBUF,nrf_data.rbuf);
-			}
-			else
-			{
-				DEBUG_BUFFER_ACK_LOG("spi irq buffer full \r\n");
-			}
+			memcpy( (uint8_t *)(&irq_rbuf[irq_rbuf_cnt_w]),
+				(uint8_t *)(&spi_rcmd), sizeof(spi_cmd_t) );
+			irq_rbuf_cnt_w = (irq_rbuf_cnt_w + 1) % SPI_SEND_DATA_BUFFER_COUNT_MAX;
+			irq_rbuf_cnt++;
 		}
+		EXTI_ClearITPendingBit(NRF_RX_EXTI_LINE_RFIRQ);
 	}
 	ledToggle(LBLUE);
-	EXTI_ClearITPendingBit(NRF1_EXTI_LINE_RFIRQ);
 }
 
+void NRF_TX_RFIRQ_EXTI_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(NRF_TX_EXTI_LINE_RFIRQ) != RESET)
+	{
+		uint8_t rx_err = 0;
+		spi_cmd_t spi_rcmd;
+		/* 读取数据 */
+		rx_err = bsp_spi_rx_data( NRF_TX_EXTI_LINE_RFIRQ, &spi_rcmd );
+		/* 进行 UID 校验,判断是否发送给自己的数据 */
+		if(( irq_rbuf_cnt < SPI_SEND_DATA_BUFFER_COUNT_MAX ) && ( rx_err == 0 ))
+		{
+			memcpy( (uint8_t *)(&irq_rbuf[irq_rbuf_cnt_w]),
+				(uint8_t *)(&spi_rcmd), sizeof(spi_cmd_t) );
+			irq_rbuf_cnt_w = (irq_rbuf_cnt_w + 1) % SPI_SEND_DATA_BUFFER_COUNT_MAX;
+			irq_rbuf_cnt++;
+		}
+		EXTI_ClearITPendingBit(NRF_TX_EXTI_LINE_RFIRQ);
+	}
+	ledToggle(LBLUE);
+}
 /**
   * @}
   */

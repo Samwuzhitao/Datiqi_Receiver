@@ -329,10 +329,10 @@
             <vShortEn>1</vShortEn>
             <vShortWch>1</vShortWch>
             <VariousControls>
-              <MiscControls></MiscControls>
+              <MiscControls>--c99</MiscControls>
               <Define>STM32F10X_HD, USE_STDPERIPH_DRIVER,ZL_RP551_MAIN_H</Define>
               <Undefine></Undefine>
-              <IncludePath>..\Libraries\CMSIS\CM3\CoreSupport;..\Libraries\CMSIS\CM3\DeviceSupport\ST\STM32F10x;..\Libraries\STM32F10x_StdPeriph_Driver\inc;..\include;..\User;..\Bsp;..\Libraries\cJSON;..\Bsp\ZL_RP551_MAIN_E;..\Bsp\ZL_RP551_MAIN_F;..\Bsp\ZL_RP551_MAIN_H</IncludePath>
+              <IncludePath>..\Libraries\CMSIS\CM3\CoreSupport;..\Libraries\CMSIS\CM3\DeviceSupport\ST\STM32F10x;..\Libraries\STM32F10x_StdPeriph_Driver\inc;..\include;..\User;..\Bsp;..\Libraries\cJSON;..\Bsp\ZL_RP551_MAIN_E;..\Bsp\ZL_RP551_MAIN_F;..\Bsp\ZL_RP551_MAIN_H;..\User\protocol_lib</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -434,21 +434,6 @@
               <FileName>nrf.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Bsp\nrf.c</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>BSP/RP551_E</GroupName>
-          <Files>
-            <File>
-              <FileName>bsp_rp551_e.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Bsp\ZL_RP551_MAIN_E\bsp_rp551_e.c</FilePath>
-            </File>
-            <File>
-              <FileName>bsp_rp551_e.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\Bsp\ZL_RP551_MAIN_E\bsp_rp551_e.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -671,11 +656,6 @@
               <FilePath>..\User\app_card_process.c</FilePath>
             </File>
             <File>
-              <FileName>app_handle_layer.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\app_handle_layer.c</FilePath>
-            </File>
-            <File>
               <FileName>app_send_data_process.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\User\app_send_data_process.c</FilePath>
@@ -739,6 +719,31 @@
               <FileName>cJSON_Utils.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Libraries\cJSON\cJSON_Utils.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Prolib</GroupName>
+          <Files>
+            <File>
+              <FileName>rf_link_protocol.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\protocol_lib\rf_link_protocol.c</FilePath>
+            </File>
+            <File>
+              <FileName>spi_link_protocol.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\protocol_lib\spi_link_protocol.c</FilePath>
+            </File>
+            <File>
+              <FileName>rf_link_protocol.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\protocol_lib\rf_link_protocol.h</FilePath>
+            </File>
+            <File>
+              <FileName>spi_link_protocol.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\protocol_lib\spi_link_protocol.h</FilePath>
             </File>
           </Files>
         </Group>

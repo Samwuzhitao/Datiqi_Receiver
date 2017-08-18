@@ -57,7 +57,7 @@ typedef struct
 
 extern timer_list_typedef timer_list;
 extern Timer_typedef retransmit_2s_timer,retransmit_500ms_timer,system_timer;
-extern Timer_typedef spi_send_data_timer,spi_send_data_timer1;
+extern Timer_typedef spi_send_data1_timer;
 extern RTC_timer_Typedef system_rtc_timer;
 extern Timer_typedef card_buzzer_timer,card_second_find_timer;
 

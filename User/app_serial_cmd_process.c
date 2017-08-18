@@ -19,6 +19,7 @@
 #include "main.h"
 #include "cJSON.h"
 #include "app_send_data_process.h"
+#include "app_spi_send_data_process.h"
 #include "app_card_process.h"
 #include "app_show_message_process.h"
 
@@ -683,22 +684,21 @@ void serial_cmd_answer_stop(const cJSON *object)
 
 void serial_cmd_set_channel(const cJSON *object)
 {
-	char str[3];
-	uint8_t tx_ch = 0x02, rx_ch = 0x04;
 	int8_t status;
+	nor_buf_t t_conf = RF_TX_CH_DEFAULT_CONF;
+	nor_buf_t r_conf = RF_RX_CH_DEFAULT_CONF;
 
-	tx_ch = atoi(cJSON_GetObjectItem(object, "tx_ch")->valuestring);
-	rx_ch = atoi(cJSON_GetObjectItem(object, "rx_ch")->valuestring);
-	if((( tx_ch >= 1) && ( tx_ch <= 11)) && 
-		 (( rx_ch >= 1) && ( rx_ch <= 11)) &&
-	    ( tx_ch != rx_ch ))
+	t_conf.t_buf[RF_ADDR_CH] = atoi(cJSON_GetObjectItem(object, "tx_ch")->valuestring);
+	r_conf.t_buf[RF_ADDR_CH] = atoi(cJSON_GetObjectItem(object, "rx_ch")->valuestring);
+	if((( t_conf.t_buf[RF_ADDR_CH] >= 1) && ( t_conf.t_buf[RF_ADDR_CH] <= 11)) && 
+		 (( r_conf.t_buf[RF_ADDR_CH] >= 1) && ( r_conf.t_buf[RF_ADDR_CH] <= 11)) &&
+	    ( t_conf.t_buf[RF_ADDR_CH] != r_conf.t_buf[RF_ADDR_CH] ))
 	{
-		clicker_set.N_CH_TX = tx_ch;
-		clicker_set.N_CH_RX = rx_ch;
-
-		/* 设置接收的信道：答题器与接收是反的 */
-		status  = spi_set_cpu_rx_signal_ch(clicker_set.N_CH_TX);
-		status |= spi_set_cpu_tx_signal_ch(clicker_set.N_CH_RX);
+		/* 设置接收的信道 */
+		clicker_set.N_CH_TX = t_conf.t_buf[RF_ADDR_CH];
+		clicker_set.N_CH_RX = r_conf.t_buf[RF_ADDR_CH];
+		status |= spi_write_cmd_to_rx( r_conf.t_buf, r_conf.len );
+		status |= spi_write_cmd_to_tx( t_conf.t_buf, t_conf.len );
 	}
 	else
 	{
@@ -707,8 +707,7 @@ void serial_cmd_set_channel(const cJSON *object)
 	/* 打印返回 */
 	b_print("{\r\n");
 	b_print("  \"fun\": \"set_channel\",\r\n");
-	sprintf(str, "%d" , (int8_t)(status));
-	b_print("  \"result\": \"%s\"\r\n",str);
+	b_print("  \"result\": \"%d\"\r\n",(int8_t)(status));
 	b_print("}\r\n");
 }
 
@@ -1093,8 +1092,8 @@ void serial_cmd_answer_start(char *pdata_str)
 			if(clicker_set.N_CH_RX == clicker_set.N_CH_TX )
 				clicker_set.N_CH_RX = (clicker_set.N_CH_TX + 2) % 11;
 	
-			status  = spi_set_cpu_tx_signal_ch(clicker_set.N_CH_RX);
-			status |= spi_set_cpu_rx_signal_ch(clicker_set.N_CH_TX);
+//			status  = spi_set_cpu_tx_signal_ch(clicker_set.N_CH_RX);
+//			status |= spi_set_cpu_rx_signal_ch(clicker_set.N_CH_TX);
 
 			if( status != 0 )
 			{
@@ -1264,7 +1263,7 @@ void serial_cmd_import_config(char *pdata_str)
 						clicker_set.N_CH_TX = tx_ch;
 
 						/* 设置接收的信道：答题器与接收是反的 */
-						spi_set_cpu_rx_signal_ch(clicker_set.N_CH_TX);
+						//spi_set_cpu_rx_signal_ch(clicker_set.N_CH_TX);
 						result = 0;
 					}
 					else
@@ -1281,7 +1280,7 @@ void serial_cmd_import_config(char *pdata_str)
 						clicker_set.N_CH_RX = rx_ch;
 
 						/* 设置接收的信道：答题器与接收是反的 */
-						spi_set_cpu_tx_signal_ch(clicker_set.N_CH_RX);
+						//spi_set_cpu_tx_signal_ch(clicker_set.N_CH_RX);
 						result = 0;
 					}
 					else

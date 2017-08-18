@@ -94,11 +94,9 @@ void App_card_process(void)
 		#endif
 
 		PcdAntennaOn();
-	  //MRC500_DEBUG_START("PcdRequest \r\n");
 		memset(g_cardType, 0, 40);
 		/* reqA指令 :请求A卡，返回卡类型，不同类型卡对应不同的UID长度 */
 		status = PcdRequest(PICC_REQIDL,g_cardType);
-	  //MRC500_DEBUG_END();
 		if( status == MI_OK )
 		{
 			if(find_card_ok == 1)
@@ -512,16 +510,9 @@ void App_card_process(void)
 			if(( wtrte_flash_ok == 1 ) && (wl.weite_std_id_status == OFF))
 			{
 				#ifndef OPEN_CARD_DATA_SHOW 
-				char str[20];
-//  		uint8_t i,uid[4];
 				b_print("{\r\n");
 				b_print("  \"fun\": \"update_card_info\",\r\n");
-				memset(str,0,20);
-//			b_print("  \"HEX\": \"%02X%02X%02X%02X\",\r\n",
-//			wl.uids[write_uid_pos].uid[0],wl.uids[write_uid_pos].uid[1],
-//			wl.uids[write_uid_pos].uid[2],wl.uids[write_uid_pos].uid[3]);
-				sprintf(str, "%010u" , *(uint32_t *)( wl.uids[write_uid_pos].uid));
-				b_print("  \"card_id\": \"%s\",\r\n",str);
+				b_print("  \"card_id\": \"%010u\",\r\n",*(uint32_t *)( wl.uids[write_uid_pos].uid));
 				if( wl.is_printf_clear_uid == 1 )
 				{
 					wl.is_printf_clear_uid = 0;
@@ -532,11 +523,6 @@ void App_card_process(void)
 				{
 					b_print("  \"replace_uid\": \"\"\r\n");
 				}
-//			memset(str,0,20);
-//			for(i=0;i<4;i++)
-//				uid[i] = wl.uids[write_uid_pos].uid[3-i];
-//			sprintf(str, "%010u" , *(uint32_t *)( uid ));
-//			b_print("  \"正码\": \"%s\"\r\n", str );
 				b_print("}\r\n");
 				DEBUG_CARD_DATA_LOG("NDEF_DataRead and NDEF_DataWrite Clear!\r\n");
 				#endif
