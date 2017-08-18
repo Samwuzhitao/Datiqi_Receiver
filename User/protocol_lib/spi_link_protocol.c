@@ -20,10 +20,6 @@ static uint8_t hal_nrf_rw(SPI_TypeDef* SPIx, uint8_t value)
 
 static void spi_tx_put_char( uint8_t s_char )
 {
-#ifdef ZL_RP551_MAIN_E
-		hal_nrf_rw( SPI1, s_char );
-#endif
-
 #ifdef ZL_RP551_MAIN_F
 		hal_nrf_rw( SPI2, s_char );
 #endif
@@ -42,10 +38,6 @@ static void spi_rx_put_char( uint8_t s_char )
 
 static uint8_t spi_tx_get_char( void )
 {
-	#ifdef ZL_RP551_MAIN_E
-	uint8_t r_char = hal_nrf_rw( SPI1, 0xFF );
-#endif
-
 #ifdef ZL_RP551_MAIN_F
 	uint8_t r_char = hal_nrf_rw( SPI2, 0xFF );
 #endif
