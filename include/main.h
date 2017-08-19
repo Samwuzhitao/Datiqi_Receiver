@@ -17,18 +17,19 @@
 #include "board.h"
 #include "stm32f10x.h"
 #include "define.h"
+#include "whitelist.h"
+#include "version.h"
+
 #include "stm32f10x_it.h"
 #include "mfrc500.h"
 #include "m24sr_cmd.h"
-#include "define.h"
-
 #include "app_timer.h"
 #include "eeprom.h"
 #include "gpio.h"
-#include "version.h"
+
 #include "nrf.h"
-#include "whitelist.h"
 #include "ringbuffer.h"
+
 
 #include "rf_link_protocol.h"
 #include "spi_link_protocol.h"

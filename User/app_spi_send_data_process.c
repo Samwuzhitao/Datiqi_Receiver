@@ -47,7 +47,7 @@ void spi_rx_data_process( void )
 {
 	if( irq_rbuf_cnt > 0 )
 	{
-		uint8_t i, rx_s = 0, rx_cnt = 0;
+		uint8_t i;
 		printf("\t rx_buf: ");
 		printf("%02x %02x %02x %02x",                                      \
 			irq_rbuf[irq_rbuf_cnt_r].header, irq_rbuf[irq_rbuf_cnt_r].dev_t, \
@@ -130,9 +130,7 @@ void spi_timer_init( void )
 ******************************************************************************/
 void spi_write_data_to_buf( u8 *buf, u8 len, u8 cnt, u8 us, u8 ms )
 {
-	spi_pro_init_pack( &sbuf[sbuf_cnt_w] );
-	sbuf[sbuf_cnt_w].cmd   = 0x10;
-	sbuf[sbuf_cnt_w].dev_t = DEVICE_TX;
+	spi_pro_init_pack( &sbuf[sbuf_cnt_w], DEVICE_TX, 0x10);
 	sbuf[sbuf_cnt_w].length = len;
 	memcpy( sbuf[sbuf_cnt_w].data, buf, len);
 	spi_pro_pack_update_crc( &sbuf[sbuf_cnt_w] );
@@ -140,11 +138,23 @@ void spi_write_data_to_buf( u8 *buf, u8 len, u8 cnt, u8 us, u8 ms )
 	sbuf_cnt++;
 }
 
+spi_cmd_t *spi_malloc_buf( void )
+{
+	spi_cmd_t *pdata;
+	if( sbuf_cnt < SPI_SEND_DATA_BUFFER_COUNT_MAX )
+	{
+		pdata = &sbuf[sbuf_cnt_w];
+		sbuf_cnt_w = (sbuf_cnt_w + 1) % SPI_SEND_DATA_BUFFER_COUNT_MAX;
+		sbuf_cnt++;
+	}
+	else
+		pdata = NULL;
+	return pdata;
+}
+
 int8_t spi_write_cmd_to_tx( u8 *buf, u8 len )
 {
-	spi_pro_init_pack( &sbuf[sbuf_cnt_w] );
-	sbuf[sbuf_cnt_w].cmd   = 0x20;
-	sbuf[sbuf_cnt_w].dev_t = DEVICE_TX;
+	spi_pro_init_pack( &sbuf[sbuf_cnt_w], DEVICE_TX, 0x20);
 	sbuf[sbuf_cnt_w].length = len;
 	memcpy( sbuf[sbuf_cnt_w].data, buf, len);
 	spi_pro_pack_update_crc( &sbuf[sbuf_cnt_w] );
@@ -155,9 +165,7 @@ int8_t spi_write_cmd_to_tx( u8 *buf, u8 len )
 
 int8_t spi_write_cmd_to_rx( u8 *buf, u8 len )
 {
-	spi_pro_init_pack( &sbuf[sbuf_cnt_w] );
-	sbuf[sbuf_cnt_w].cmd   = 0x20;
-	sbuf[sbuf_cnt_w].dev_t = DEVICE_RX;
+	spi_pro_init_pack( &sbuf[sbuf_cnt_w], DEVICE_RX, 0x20);
 	sbuf[sbuf_cnt_w].length = len;
 	memcpy( sbuf[sbuf_cnt_w].data, buf, len);
 	spi_pro_pack_update_crc( &sbuf[sbuf_cnt_w] );

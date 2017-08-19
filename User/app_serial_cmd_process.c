@@ -275,9 +275,9 @@ static void uart_update_answers(void)
 	
 	if( uart_send_s == 3 )
 	{
-		char answer_type[2];
-		char answer_range[7];
-		answer_info_typedef answer_temp = {0,0,0};
+		char q_t_str[2];
+		char q_r_str[7];
+		q_info_t q_tmp = {0,0,0};
 		
 		uint8_t  *prdata;
 		prdata   = spi_message+14+spi_message[14]+2+2;
@@ -286,29 +286,30 @@ static void uart_update_answers(void)
 		{
 			if(is_last_data_full == 0)
 			{
-				answer_temp.type  = prdata[r_index] & 0x0F;
-				answer_temp.id    = ((prdata[r_index]   & 0xF0) >> 4)| 
-														((prdata[r_index+1] & 0x0F) << 4);
-				answer_temp.range = ((prdata[r_index+1] & 0xF0) >> 4)| 
-														((prdata[r_index+2] & 0x0F) << 4);
+				q_tmp.type  = prdata[r_index] & 0x0F;
+				q_tmp.id    = ((prdata[r_index]   & 0xF0) >> 4)| 
+											((prdata[r_index+1] & 0x0F) << 4);
+				q_tmp.range = ((prdata[r_index+1] & 0xF0) >> 4)| 
+											((prdata[r_index+2] & 0x0F) << 4);
 				r_index = r_index + 2;
 				is_last_data_full = 1;
 			}
 			else
 			{
-				answer_temp.type  = (prdata[r_index] & 0xF0) >> 4;
-				answer_temp.id    = prdata[r_index+1];
-				answer_temp.range = prdata[r_index+2];
+				q_tmp.type  = (prdata[r_index] & 0xF0) >> 4;
+				q_tmp.id    = prdata[r_index+1];
+				q_tmp.range = prdata[r_index+2];
 				r_index = r_index + 3;
 				is_last_data_full = 0;
 			}
-
-			r_answer_dtq_decode( &answer_temp, answer_range, answer_type );
+			memset( q_r_str, 0x00, 7 );
+			memset( q_t_str, 0x00, 2 );
+			dtq_decode_answer( &q_tmp, q_r_str, q_t_str );
 
 			b_print("    {");
-			b_print("\"type\": \"%s\", ",answer_type);
-			b_print("\"id\": \"%d\", ", answer_temp.id);
-			b_print("\"answer\": \"%s\" ",answer_range);
+			b_print("\"type\": \"%s\", ",q_t_str);
+			b_print("\"id\": \"%d\", ", q_tmp.id);
+			b_print("\"answer\": \"%s\" ",q_r_str);
 			if( r_index < DataLen-2 )
 				b_print("},\r\n");
 			else
@@ -476,33 +477,6 @@ void serial_cmd_one_key_off(const cJSON *object)
 	b_print("}\r\n");
 }
 
-void serial_cmd_answer_stop(const cJSON *object)
-{
-	uint8_t sdata_index;
-	uint8_t *pSdata;
-	/* 准备发送数据 */
-	pSdata = (uint8_t *)rf_var.tx_buf+1;
-	*(pSdata+(sdata_index++)) = 0x01;
-	rf_var.cmd = 0x11;
-	rf_var.tx_len = sdata_index+2 ;
-	/* 发送数据 */
-	{
-		nrf_transmit_parameter_t transmit_config;
-		/* 准备发送数据管理块 */
-		memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
-		memset(nrf_data.dtq_uid,    0x00, 4);
-		memset(transmit_config.dist,0x00, 4);
-		send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
-		send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
-		/* 启动发送数据状态机 */
-		set_send_data_status( SEND_500MS_DATA_STATUS );
-	}
-	/* 打印返回 */
-	b_print("{\r\n");
-	b_print("  \"fun\": \"answer_stop\",\r\n");
-	b_print("  \"result\": \"0\"\r\n");
-	b_print("}\r\n");
-}
 
 void serial_cmd_set_channel(const cJSON *object)
 {
@@ -684,76 +658,7 @@ void serial_cmd_raise_hand_sign_in_set(const cJSON *object)
 	b_print("}\r\n");
 }
 
-void serial_cmd_answer_start(char *pdata_str)
-{
-	/* prase data control */ 
-	char     *p_end,*p_next = pdata_str; 
-	uint16_t str_len    = strlen(pdata_str);
-	uint8_t  real_total = 0;
-	int8_t   err        = 0;
-	/* send data control */
-	answer_info_typedef q_temp = { 0, 0, 0 };
-	spi_cmd_t s_data  = SPI_DATA_DEFAULT;
-	rf_pack_t rf_data;
-	answer_cmd_t *answer_cmd = (answer_cmd_t *)rf_data.data;
 
-	rf_pro_init_pack( &rf_data );
-	rf_pro_pack_num_add( &rf_data );
-	answer_pack_init( answer_cmd );
-	answer_pack_quenum_add( answer_cmd );
-
-	do
-	{
-		uint8_t i = 0;
-		char value_str[25],key_str[20];
-		memset( value_str, 0x00, 25 );
-		memset( key_str,   0x00, 20 );
-		p_end  = parse_json_item( p_next, key_str, value_str );
-		p_next = p_end;
-		for( i = 0; i < ANSWER_ITEM_NUM; i++ )
-		{
-			if( strncmp( key_str, answer_list[i].key, \
- 				  answer_list[i].str_len ) == 0 )
-			{
-				switch( i )
-				{
-					case ANSWER_STATUS_TIME : 
-						answer_time( NULL, value_str ); break;
-					case ANSWER_STATUS_DATA_TYPE: 
-						answer_data_type ( (uint8_t *)&q_temp, value_str ); break;
-					case ANSWER_STATUS_DATA_ID: 
-						answer_data_id   ( (uint8_t *)&q_temp, value_str ); break;
-					case ANSWER_STATUS_DATA_RANGE: 
-						answer_data_range( (uint8_t *)&q_temp, value_str ); break;
-					default: break;
-				}
-				break;
-			}
-		}
-		r_answer_dtq_encode( i, &(answer_cmd->len),(uint8_t *)&q_temp,
-		                     answer_cmd->buf );
-		rf_data.pack_len = answer_cmd->len + 3;
-		/* process string status, get prase data */
-		if( err != 0 )
-			break ;
-
-		real_total++;
-		if( real_total > 80 )
-		{
-			err = -2;
-			break;
-		}
-	}while( ( p_end - pdata_str ) < str_len-3 );
-	
-  rf_data_to_spi_data( &s_data, &rf_data );
-	bsp_spi_tx_data( &s_data );
-
-	/* 打印返回 */
-	b_print("{\r\n");
-	b_print("  \"fun\": \"answer_start\",\r\n");
-	b_print("  \"result\": \"%d\"\r\n",err);
-	b_print("}\r\n");
-}
 
 void serial_cmd_check_config(const cJSON *object)
 {
@@ -814,13 +719,6 @@ void serial_cmd_check_config(const cJSON *object)
 
 void serial_cmd_import_config(char *pdata_str)
 {
-	typedef struct
-		{
-			uint8_t type;
-			uint8_t id;
-			uint8_t range;
-		}answer_info_typedef;
-	
 	/* prase data control */ 
 	char *p_end,*p_next_start; 
 	char value_str[25],key_str[20];

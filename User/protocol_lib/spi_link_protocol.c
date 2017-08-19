@@ -54,15 +54,17 @@ static uint8_t spi_rx_get_char( void )
 	return r_char;
 }
 
-void spi_pro_init_pack( spi_cmd_t *spi_scmd )
+void spi_pro_init_pack( spi_cmd_t *spi_scmd, spi_dev_t dev_t, uint8_t cmd )
 {
 	spi_scmd->header = SPI_PACK_SOF;
 	spi_scmd->end    = SPI_PACK_EOF;
+	spi_scmd->length = 0;
+	spi_scmd->dev_t  = dev_t;
+	spi_scmd->cmd    = cmd;
 }
 
 void spi_pro_pack_update_crc( spi_cmd_t *spi_scmd )
 {
-	spi_pro_init_pack( spi_scmd );
 	spi_scmd->xor = XOR_Cal( (uint8_t *)&(spi_scmd->dev_t),
 		spi_scmd->length + 3 );
 }
@@ -71,7 +73,6 @@ void rf_data_to_spi_data( spi_cmd_t *spi_data, rf_pack_t *rf_pack )
 {
 	uint8_t i;
 	uint8_t *pdata = spi_data->data;
-
 	rf_pro_pack_update_crc( rf_pack );
 
 	SPI_RF_DEBUG("\r\n[RF]s :");

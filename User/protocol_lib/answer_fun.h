@@ -14,16 +14,16 @@
 
 //#define ENABLE_ANSWER_ENCODE_DEBUG  
 
-#define ANSWER_STATUS_FUN                  1
-#define ANSWER_STATUS_TIME                 2
-#define ANSWER_STATUS_QUESTION             3
-#define ANSWER_STATUS_DATA_TYPE            4
-#define ANSWER_STATUS_DATA_ID              5
-#define ANSWER_STATUS_DATA_RANGE           6
-#define ANSWER_STATUS_HAND                 7
-#define ANSWER_STATUS_SIGN                 8
+#define AS_FUN                  1
+#define AS_TIME                 2
+#define AS_QUESTION             3
+#define AS_QUESTION_T           4
+#define AS_QUESTION_I           5
+#define AS_QUESTION_R           6
+#define AS_HAND                 7
+#define AS_SIGN                 8
 
-#define ANSWER_ITEM_NUM                    7
+#define ANSWER_ITEM_NUM         7
 
 /* Private functions ---------------------------------------------------------*/
 typedef struct
@@ -31,7 +31,7 @@ typedef struct
 	uint8_t type;
 	uint8_t id;
 	uint8_t range;
-}answer_info_typedef;
+}q_info_t;
 
 typedef struct
 {
@@ -68,16 +68,7 @@ typedef struct
 void answer_pack_init( answer_cmd_t *answer_pack );
 void answer_pack_quenum_add( answer_cmd_t *answer_pack );
 
-void answer_time      ( uint8_t *pdada, char *v_str );
-void answer_raise_hand( uint8_t *pdada, char *v_str );
-void answer_data_type ( uint8_t *pdada, char *v_str );
-void answer_data_id   ( uint8_t *pdada, char *v_str );
-void answer_data_range( uint8_t *pdada, char *v_str );
-extern const json_item_t answer_list[];
-
-void parse_str_to_time( char *str );
-void r_answer_dtq_decode( answer_info_typedef *answer_temp,
-	char *answer_range, char * answer_type );
-void r_answer_dtq_encode( uint8_t type, uint8_t *len, uint8_t *rpbuf, uint8_t *spbuf );
-
+void dtq_decode_answer( q_info_t *q_tmp, char *q_r, char * q_t );
+void dtq_encode_answer( q_info_t *q_tmp, uint8_t *sbuf, uint8_t *sbuf_len );
+void serial_cmd_answer_start( char *json_str );
 #endif

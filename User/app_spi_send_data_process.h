@@ -28,4 +28,5 @@ uint8_t get_spi_status( void );
 int8_t spi_write_cmd_to_rx( u8 *buf, u8 len );
 int8_t spi_write_cmd_to_tx( u8 *buf, u8 len );
 void spi_timer_init( void );
+spi_cmd_t *spi_malloc_buf( void );
 #endif
