@@ -11,6 +11,14 @@
 #define _RF_PROTOCOL_V0200_H_
 #include "stm32f10x.h"
 
+//#define ENABLE_SPI_DECODE_DEBUG
+
+#ifdef ENABLE_SPI_DECODE_DEBUG
+#define SPI_DECODE_DEBUG  printf
+#else
+#define SPI_DECODE_DEBUG(...)
+#endif
+
 #define	NRF_TOTAL_DATA_LEN				    (250)				// 2.4G数据总长度
 #define RF_REV_DATA_LEN               (16)        // 预留扩展的最大数据长度
 #define VERSION_MAJOR                 (2)         // 协议主版本号
@@ -37,19 +45,29 @@ typedef union {
 
 typedef struct
 {
+	uint8_t	 	src_uid[RF_DEV_ID_LEN];
+	uint8_t		dst_uid[RF_DEV_ID_LEN];
+	dtq_dev_t dev_id;
+	ver_num_t ver_num;
+	uint8_t   seq_num;
+	uint8_t   pac_num;
+}rf_pack_ctl_t;
+
+typedef struct
+{
 	uint8_t         head;
-	uint8_t	 				src_uid[RF_DEV_ID_LEN];
-	uint8_t					dst_uid[RF_DEV_ID_LEN];
-	dtq_dev_t       dev_id;
-	ver_num_t       ver_num;
-	uint8_t         seq_num;
-	uint8_t         pack_num;
+	rf_pack_ctl_t   ctl;
 	uint8_t         rev_len;
-	uint8_t         rev_data[RF_REV_DATA_LEN];
+	uint8_t         rev_data[16];
 	uint8_t					pack_len;
 	uint8_t					data[NRF_TOTAL_DATA_LEN];
 	uint8_t         crc_xor;
 	uint8_t         end;
 }rf_pack_t;
+
+void rf_pro_init_pack( rf_pack_t *rf_pack );
+void rf_pro_pack_update_crc( rf_pack_t *rf_pack );
+void rf_pro_pack_debug( rf_pack_t *rf_pack );
+void rf_pro_pack_num_add( rf_pack_t *rf_pack );
 
 #endif

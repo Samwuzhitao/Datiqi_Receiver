@@ -745,6 +745,26 @@
               <FileType>5</FileType>
               <FilePath>..\User\protocol_lib\spi_link_protocol.h</FilePath>
             </File>
+            <File>
+              <FileName>answer_fun.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\protocol_lib\answer_fun.c</FilePath>
+            </File>
+            <File>
+              <FileName>answer_fun.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\protocol_lib\answer_fun.h</FilePath>
+            </File>
+            <File>
+              <FileName>json_decode.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\protocol_lib\json_decode.c</FilePath>
+            </File>
+            <File>
+              <FileName>json_decode.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\User\protocol_lib\json_decode.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

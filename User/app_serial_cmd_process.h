@@ -24,9 +24,6 @@
 
 void App_seirial_cmd_process(void);
 
-/* Uart Message configuration */
-
-
 /* Uart Message frame header and tail */
 #define UART_SOF								          ('{')							//֡ͷ
 #define UART_EOF 								          ('}')							//֡β
@@ -35,15 +32,6 @@ void App_seirial_cmd_process(void);
 #define UartSTART 							          (1)
 #define UartDATA	 								        (2)
 #define UartEND 								          (3)
-
-#define ANSWER_STATUS_FUN                  1
-#define ANSWER_STATUS_TIME                 2
-#define ANSWER_STATUS_QUESTION             3
-#define ANSWER_STATUS_DATA_TYPE            4
-#define ANSWER_STATUS_DATA_ID              5
-#define ANSWER_STATUS_DATA_RANGE           6
-#define ANSWER_STATUS_HAND                 7
-#define ANSWER_STATUS_SIGN                 8
 
 #define IMPORT_STATUS_FUN                  0x01
 #define IMPORT_STATUS_ADDR                 0x02
@@ -54,14 +42,6 @@ void App_seirial_cmd_process(void);
 #define IMPORT_STATUS_UPOS                 0x07
 #define IMPORT_STATUS_UID                  0x08
 #define IMPORT_STATUS_ATT                  0x09
-
-typedef struct
-{
-	char    *key;
-	uint8_t key_str_len;
-	uint8_t status;
-}json_item_typedef;
-
 
 typedef enum
 {

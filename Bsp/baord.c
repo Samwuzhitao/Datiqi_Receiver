@@ -143,15 +143,11 @@ int fgetc(FILE *f)
 *******************************************************************************/
 uint8_t XOR_Cal(uint8_t *data, uint16_t length)
 {
-	uint8_t temp_xor;
+	uint8_t  crc = *data;
 	uint16_t i;
-
-	temp_xor = *data;
-	for(i = 1;i < length; i++)
-	{
-		temp_xor = temp_xor ^ *(data+i);
-	}
-	return temp_xor;
+	for( i = 1; i < length; i++ )
+		crc = crc ^ *(data+i);
+	return crc;
 }
 
 /****************************************************************************

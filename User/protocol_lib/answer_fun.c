@@ -3,33 +3,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-const json_item_typedef answer_item_list[] = {
-{"fun",            sizeof("fun"),            ANSWER_STATUS_FUN},
-{"time",           sizeof("time"),           ANSWER_STATUS_TIME},
-{"raise_hand",     sizeof("raise_hand"),     ANSWER_STATUS_HAND},
-{"questions",      sizeof("questions"),      ANSWER_STATUS_QUESTION},
-{"type",           sizeof("type"),           ANSWER_STATUS_DATA_TYPE},
-{"id",             sizeof("id"),             ANSWER_STATUS_DATA_ID},
-{"range",          sizeof("range"),          ANSWER_STATUS_DATA_RANGE},
-{"over",           sizeof("over"),           0xFF}
+static uint8_t answer_quenum     = 1;
+static uint8_t is_last_data_full = 0;
+
+const json_item_t answer_list[] = {
+{"fun",        sizeof("fun"),        NULL              },
+{"time",       sizeof("time"),       answer_time       },
+{"raise_hand", sizeof("raise_hand"), answer_raise_hand },
+{"questions",  sizeof("questions"),  NULL              },
+{"type",       sizeof("type"),       answer_data_type  },
+{"id",         sizeof("id"),         answer_data_id    },
+{"range",      sizeof("range"),      answer_data_range }
 };
 
-
-void exchange_json_format( char *out, char old_format, char new_format )
+void answer_pack_init( answer_cmd_t *answer_pack )
 {
-	char *pdata = out;
-
-	while(*pdata != '\0')
-	{
-		if(*pdata == old_format)
-		{
-			*pdata = new_format;
-		}
-		pdata++;
-	}
+	is_last_data_full = 0;
+	answer_pack->cmd  = 0x10;
+	answer_pack->len  = 0;
 }
 
-void parse_str_to_time( char *str )
+void answer_pack_quenum_add( answer_cmd_t *answer_pack )
+{
+	answer_pack->que_num.bits.num = answer_quenum;
+	answer_quenum = (answer_quenum + 1) % 16;
+	if(answer_quenum == 0)
+		answer_quenum = 1;
+}
+
+void answer_time( uint8_t *pdada, char *str )
 {
 	char str1[10];
 	/*system_rtc_timer:year*/
@@ -58,7 +60,93 @@ void parse_str_to_time( char *str )
 	system_rtc_timer.sec = atoi( str1 );
 }
 
+void answer_raise_hand( uint8_t *pdada, char *v_str )
+{
+	
+}
 
+void answer_data_type( uint8_t *pdada, char *v_str )
+{
+	answer_info_typedef *p_answer = (answer_info_typedef *)pdada;
+	switch( v_str[0] )
+	{
+		case 's': p_answer->type = 0; break;
+		case 'm': p_answer->type = 1; break;
+		case 'j': p_answer->type = 2; break;
+		case 'd': p_answer->type = 3; break;
+		case 'g': p_answer->type = 4; break;
+		default: break;
+	}
+}
+
+void answer_data_id( uint8_t *pdada, char *v_str )
+{
+	answer_info_typedef *p_answer = (answer_info_typedef *)pdada;
+	p_answer->id = atoi( v_str );
+}
+
+void answer_data_range( uint8_t *pdada, char *v_str )
+{
+	answer_info_typedef *p_answer = (answer_info_typedef *)pdada;
+	char range_end;
+	if( p_answer->type == 2 )
+		p_answer->range = 0x03;
+	else if( p_answer->type == 4 )
+		p_answer->range = 0xFF;
+	else
+	{
+		range_end  = v_str[2];
+		if(( range_end >= 'A') && ( range_end <= 'G'))
+		{
+			uint8_t j;
+			for(j=0;j<=range_end-'A';j++)
+				p_answer->range |= 1<<j; 
+		}
+		if(( range_end >= '0') && ( range_end <= '9'))
+				p_answer->range = range_end - '0'; 
+	}
+}
+
+void r_answer_dtq_encode( uint8_t type, uint8_t *len, uint8_t *rpbuf, uint8_t *spbuf )
+{
+	uint8_t s_cnt = *len;
+	answer_info_typedef *q_tmp = (answer_info_typedef *)rpbuf;
+	
+	if( type == ANSWER_STATUS_DATA_RANGE )
+	{
+		if(is_last_data_full == 0)
+		{
+			*(spbuf+(s_cnt++)) = ((q_tmp->type) & 0x0F ) | 
+													 ((q_tmp->id & 0x0F) << 4);
+			*(spbuf+(s_cnt++)) = ((q_tmp->id & 0xF0)>>4) | 
+													 ((q_tmp->range & 0x0F) << 4);
+			*(spbuf+(s_cnt))   = (q_tmp->range & 0xF0)>>4;
+			is_last_data_full = 1;
+		}
+		else
+		{
+			*(spbuf+(s_cnt))   = *(spbuf+(s_cnt)) | 
+														((q_tmp->type & 0x0F) << 4);
+			s_cnt++;
+			*(spbuf+(s_cnt++)) = q_tmp->id ;
+			*(spbuf+(s_cnt++)) = q_tmp->range ;
+			is_last_data_full = 0;
+		}
+#ifdef ENABLE_ANSWER_ENCODE_DEBUG
+		{
+			uint8_t i;
+			printf("ANSWER_ENCMDE:");
+			printf("  ");
+			for( i=0; i<*len+19; i++ )
+				printf("   ");
+			for( i=0; i<s_cnt-*len; i++ )
+				printf(" %02x", *(spbuf+*len+i));
+			printf("\r\n");
+		}
+#endif
+	}
+	*len = s_cnt;
+}
 
 void r_answer_dtq_decode( answer_info_typedef * answer_temp, 
 	char *answer_range, char * answer_type )

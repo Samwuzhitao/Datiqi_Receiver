@@ -23,7 +23,6 @@ static void spi_tx_put_char( uint8_t s_char )
 #ifdef ZL_RP551_MAIN_F
 		hal_nrf_rw( SPI2, s_char );
 #endif
-
 #ifdef ZL_RP551_MAIN_H
 		hal_nrf_rw( NRF_TX_SPI, s_char );
 #endif	
@@ -41,7 +40,6 @@ static uint8_t spi_tx_get_char( void )
 #ifdef ZL_RP551_MAIN_F
 	uint8_t r_char = hal_nrf_rw( SPI2, 0xFF );
 #endif
-
 #ifdef ZL_RP551_MAIN_H
 	uint8_t r_char = hal_nrf_rw( NRF_TX_SPI, 0xFF );
 #endif	
@@ -56,17 +54,80 @@ static uint8_t spi_rx_get_char( void )
 	return r_char;
 }
 
+void spi_pro_init_pack( spi_cmd_t *spi_scmd )
+{
+	spi_scmd->header = SPI_PACK_SOF;
+	spi_scmd->end    = SPI_PACK_EOF;
+}
 
 void spi_pro_pack_update_crc( spi_cmd_t *spi_scmd )
 {
+	spi_pro_init_pack( spi_scmd );
 	spi_scmd->xor = XOR_Cal( (uint8_t *)&(spi_scmd->dev_t),
 		spi_scmd->length + 3 );
 }
 
-void spi_pro_init_pack( spi_cmd_t *spi_scmd )
+void rf_data_to_spi_data( spi_cmd_t *spi_data, rf_pack_t *rf_pack )
 {
-	spi_scmd->header = 0x86;
-	spi_scmd->end    = 0x76;
+	uint8_t i;
+	uint8_t *pdata = spi_data->data;
+
+	rf_pro_pack_update_crc( rf_pack );
+
+	SPI_RF_DEBUG("\r\n[RF]s :");
+	SPI_RF_DEBUG(" %14x", rf_pack->head);
+	*(pdata++) = rf_pack->head;
+	SPI_DECODE_DEBUG("\r\nSEC_UID:\t");
+	SPI_RF_DEBUG(" %02x %02x %02x %02x", rf_pack->ctl.src_uid[0],
+					rf_pack->ctl.src_uid[1], rf_pack->ctl.src_uid[2],
+					rf_pack->ctl.src_uid[3]);
+	memcpy(pdata,rf_pack->ctl.src_uid,4);
+	pdata = pdata + 4;
+	SPI_DECODE_DEBUG("\r\nDST_UID:\t");
+	SPI_RF_DEBUG(" %02x %02x %02x %02x", rf_pack->ctl.dst_uid[0],
+					rf_pack->ctl.dst_uid[1], rf_pack->ctl.dst_uid[2],
+					rf_pack->ctl.dst_uid[3]);
+	memcpy(pdata,rf_pack->ctl.dst_uid,4);
+	pdata = pdata + 4;
+	SPI_DECODE_DEBUG("\r\nDEV_ID:\t");
+	SPI_RF_DEBUG(" %02x", rf_pack->ctl.dev_id);
+	*(pdata++) = rf_pack->ctl.dev_id;
+	SPI_DECODE_DEBUG("\r\nVER_NUM:\t");
+	SPI_RF_DEBUG(" %02x", rf_pack->ctl.ver_num.byte);
+	*(pdata++) = rf_pack->ctl.ver_num.byte;
+	SPI_DECODE_DEBUG("\r\nSEQ_NUM:\t");
+	SPI_RF_DEBUG(" %02x", rf_pack->ctl.seq_num);
+	*(pdata++) = rf_pack->ctl.seq_num;
+	SPI_DECODE_DEBUG("\r\nPAC_NUM:\t");
+	SPI_RF_DEBUG(" %02x", rf_pack->ctl.pac_num);
+	*(pdata++) = rf_pack->ctl.pac_num;
+	SPI_DECODE_DEBUG("\r\nREV_LEN:\t");
+	SPI_RF_DEBUG(" %02x", rf_pack->rev_len);
+	*(pdata++) = rf_pack->rev_len;
+	SPI_DECODE_DEBUG("\r\nREV_DATA:\t");
+	for(i=0;i<rf_pack->rev_len;i++)
+		SPI_RF_DEBUG(" %02x", rf_pack->rev_data[i]);
+	memcpy(pdata,rf_pack->rev_data,rf_pack->rev_len);
+	pdata = pdata + rf_pack->rev_len;
+	SPI_DECODE_DEBUG("\r\nPAC_LEN:\t");
+	SPI_RF_DEBUG(" %02x", rf_pack->pack_len);
+	*(pdata++) = rf_pack->pack_len;
+	SPI_DECODE_DEBUG("\r\nPAC_DATA:\t");
+	for(i=0;i<rf_pack->pack_len;i++)
+		SPI_RF_DEBUG(" %02x", rf_pack->data[i]);
+	memcpy(pdata,rf_pack->data,rf_pack->pack_len);
+	pdata = pdata + rf_pack->pack_len;
+	SPI_DECODE_DEBUG("\r\nCRC_XOR:\t");
+	SPI_RF_DEBUG(" %02x", rf_pack->crc_xor);
+	*(pdata++) = rf_pack->crc_xor;
+	SPI_DECODE_DEBUG("\r\nEND:\t");
+	SPI_RF_DEBUG(" %02x\r\n", rf_pack->end);
+	*(pdata++) = rf_pack->end;
+
+	spi_data->length = rf_pack->pack_len + \
+		rf_pack->rev_len + sizeof(rf_pack_ctl_t) + 2 + 3;
+
+	spi_pro_pack_update_crc( spi_data );
 }
 
 uint8_t bsp_spi_rx_data( uint32_t irq, spi_cmd_t *spi_rcmd )
@@ -231,3 +292,5 @@ uint8_t bsp_spi_tx_data( spi_cmd_t *spi_scmd )
 	SPI_DATA_DEBUG("\r\n");
 	return 0;
 }
+
+

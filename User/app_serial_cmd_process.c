@@ -23,6 +23,7 @@
 #include "app_card_process.h"
 #include "app_show_message_process.h"
 #include "answer_fun.h"
+#include "json_decode.h"
 
 typedef  void (*pFunction)(void);
 
@@ -479,30 +480,23 @@ void serial_cmd_answer_stop(const cJSON *object)
 {
 	uint8_t sdata_index;
 	uint8_t *pSdata;
-
 	/* 准备发送数据 */
 	pSdata = (uint8_t *)rf_var.tx_buf+1;
 	*(pSdata+(sdata_index++)) = 0x01;
 	rf_var.cmd = 0x11;
 	rf_var.tx_len = sdata_index+2 ;
-	
 	/* 发送数据 */
 	{
 		nrf_transmit_parameter_t transmit_config;
-
 		/* 准备发送数据管理块 */
 		memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
-		
 		memset(nrf_data.dtq_uid,    0x00, 4);
 		memset(transmit_config.dist,0x00, 4);
-
 		send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
 		send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
-
 		/* 启动发送数据状态机 */
 		set_send_data_status( SEND_500MS_DATA_STATUS );
 	}
-
 	/* 打印返回 */
 	b_print("{\r\n");
 	b_print("  \"fun\": \"answer_stop\",\r\n");
@@ -529,9 +523,7 @@ void serial_cmd_set_channel(const cJSON *object)
 		status |= spi_write_cmd_to_tx( t_conf.t_buf, t_conf.len );
 	}
 	else
-	{
 		status = -1;
-	}
 	/* 打印返回 */
 	b_print("{\r\n");
 	b_print("  \"fun\": \"set_channel\",\r\n");
@@ -632,48 +624,6 @@ void serial_cmd_set_student_id(const cJSON *object)
 	free(out);
 }
 
-char *parse_json_item(char *pdata_str, char *key_str, char *value_str)
-{
-	uint8_t i = 0;
-	char *pdata = pdata_str;
-	
-	while(*pdata != ':')
-	{
-		if(*pdata != '{')
-		{
-			if((*pdata != '"') && (*pdata != ','))
-			{
-			  //printf("%c",*pdata);
-				key_str[i++] = *pdata;
-			}
-
-			if(*pdata == ',')
-			{
-				i = 0;
-			}
-		}
-		pdata++;
-	}
-	key_str[i] = '\0';
-
-	i = 0;
-	pdata++;
-	while((*pdata != ',') && (*pdata != '[') && (*pdata != '}'))
-	{
-		if(*pdata != '"')
-		{
-		  //printf("%c",*pdata);
-			value_str[i++] = *pdata;
-		}
-
-		pdata++;
-	}
-	pdata++;
-	value_str[i] = '\0';
-  //printf("KEY:%15s  VALUE:%s \r\n",key_str,value_str);
-	return (pdata);
-}
-
 void serial_cmd_raise_hand_sign_in_set(const cJSON *object)
 {
 	uint8_t raise_hand,sign_in;
@@ -736,221 +686,74 @@ void serial_cmd_raise_hand_sign_in_set(const cJSON *object)
 
 void serial_cmd_answer_start(char *pdata_str)
 {
-	typedef struct
-	{
-		uint8_t type;
-		uint8_t id;
-		uint8_t range;
-	}answer_info_typedef;
-	
 	/* prase data control */ 
-	char *p_end,*p_next_start; 
-	char value_str[25],key_str[20];
-	uint8_t parse_data_status = 0;
-	uint16_t len = strlen(pdata_str);
-	uint8_t real_total = 0;
-
+	char     *p_end,*p_next = pdata_str; 
+	uint16_t str_len    = strlen(pdata_str);
+	uint8_t  real_total = 0;
+	int8_t   err        = 0;
 	/* send data control */
-	uint8_t  *pSdata = (uint8_t *)rf_var.tx_buf+1;
-	uint16_t sdata_index = 0;
-  uint8_t  is_last_data_full = 0;
-	answer_info_typedef answer_temp = {0,0,0};
-	uint8_t send_data_status;
-	
-	/* print result */
-	char   result_str[3];
-	int8_t result = 0;
-	
-	/* prase the first key and value */
-	memset(value_str,0x00,25);
-	memset(key_str,  0x00,20);
-	p_end = parse_json_item( pdata_str, key_str, value_str );
+	answer_info_typedef q_temp = { 0, 0, 0 };
+	spi_cmd_t s_data  = SPI_DATA_DEFAULT;
+	rf_pack_t rf_data;
+	answer_cmd_t *answer_cmd = (answer_cmd_t *)rf_data.data;
 
-	while( (p_end - pdata_str) < len-3 )
+	rf_pro_init_pack( &rf_data );
+	rf_pro_pack_num_add( &rf_data );
+	answer_pack_init( answer_cmd );
+	answer_pack_quenum_add( answer_cmd );
+
+	do
 	{
 		uint8_t i = 0;
-		p_next_start = p_end;
-		
-		/* prase next key and value, and get string status*/
-		memset(value_str,0x00,25);
-		memset(key_str,  0x00,20);
-		p_end = parse_json_item( p_next_start, key_str, value_str );
-		while(answer_item_list[i].status != 0xFF)
+		char value_str[25],key_str[20];
+		memset( value_str, 0x00, 25 );
+		memset( key_str,   0x00, 20 );
+		p_end  = parse_json_item( p_next, key_str, value_str );
+		p_next = p_end;
+		for( i = 0; i < ANSWER_ITEM_NUM; i++ )
 		{
-			if(strncmp( key_str, answer_item_list[i].key,
-				          answer_item_list[i].key_str_len)== 0)
+			if( strncmp( key_str, answer_list[i].key, \
+ 				  answer_list[i].str_len ) == 0 )
 			{
-				parse_data_status = answer_item_list[i].status;
-				//printf("STATUS = %d, KEY:%-15s  VALUE:%s \r\n",\
-				        answer_item_list[i].status,key_str,value_str);
-				i = 0;
-				break;
-			}
-			i++;
-		}
-		
-		/* process string status, get prase data */
-		if( result != 0 )
-			break ;
-				
-		switch( parse_data_status )
-		{
-			case ANSWER_STATUS_FUN: break;
-			case ANSWER_STATUS_TIME:
-					parse_str_to_time( value_str );
-				break;
-			case ANSWER_STATUS_QUESTION:
-				break;
-			case ANSWER_STATUS_HAND:
+				switch( i )
 				{
-					uint32_t temp = atoi( value_str );
-					if( temp <= 1 )
-					{
-						if( temp == 0 )
-							rf_var.tx_buf[0] &= 0xFE;
-						else
-							rf_var.tx_buf[0] |= 0x01;
-					}
-				}
-				break;
-			case ANSWER_STATUS_SIGN:
-				{
-					uint32_t temp = atoi( value_str );
-					if( temp <= 1 )
-					{
-						if( temp == 0 )
-							rf_var.tx_buf[0] &= 0xFD;
-						else
-							rf_var.tx_buf[0] |= 0x02;
-					}
-				}
-				break;
-			case ANSWER_STATUS_DATA_TYPE:
-				switch( value_str[0] )
-				{
-					case 's': answer_temp.type = 0; break;
-					case 'm': answer_temp.type = 1; break;
-					case 'j': answer_temp.type = 2; break;
-					case 'd': answer_temp.type = 3; break;
-					case 'g': answer_temp.type = 4; break;
+					case ANSWER_STATUS_TIME : 
+						answer_time( NULL, value_str ); break;
+					case ANSWER_STATUS_DATA_TYPE: 
+						answer_data_type ( (uint8_t *)&q_temp, value_str ); break;
+					case ANSWER_STATUS_DATA_ID: 
+						answer_data_id   ( (uint8_t *)&q_temp, value_str ); break;
+					case ANSWER_STATUS_DATA_RANGE: 
+						answer_data_range( (uint8_t *)&q_temp, value_str ); break;
 					default: break;
 				}
 				break;
-			case ANSWER_STATUS_DATA_ID:
-				answer_temp.id = atoi(value_str);
-			break;
-			case ANSWER_STATUS_DATA_RANGE:
-				{
-					char range_end;
-					if( answer_temp.type == 2 )
-						answer_temp.range = 0x03;
-					else if( answer_temp.type == 4 )
-						answer_temp.range = 0xFF;
-					else
-					{
-						range_end  = value_str[2];
-						if(( range_end >= 'A') && ( range_end <= 'G'))
-						{
-							uint8_t j;
-							for(j=0;j<=range_end-'A';j++)
-								answer_temp.range |= 1<<j; 
-						}
-						
-						if(( range_end >= '0') && ( range_end <= '9'))
-						{
-								answer_temp.range = range_end - '0'; 
-						}
-					}
-					real_total++;
-//				printf("[%3d]:{ type  = %02x, ", real_total,answer_temp.type);
-//				printf("id = %2d, ",answer_temp.id);
-//				printf("range = %02x }\r\n",answer_temp.range);
-
-					if( real_total > 80 )
-					{
-						result = -2;
-						break;
-					}
-
-					if(is_last_data_full == 0)
-					{
-						*(pSdata+(sdata_index++)) = ((answer_temp.type) & 0x0F ) | 
-						                            ((answer_temp.id & 0x0F) << 4);
-						*(pSdata+(sdata_index++)) = ((answer_temp.id & 0xF0)>>4) | 
-						                            ((answer_temp.range & 0x0F) << 4);
-						*(pSdata+(sdata_index))   = (answer_temp.range & 0xF0)>>4;
-						is_last_data_full = 1;
-					}
-					else
-					{
-						*(pSdata+(sdata_index))   = *(pSdata+(sdata_index)) | 
-						                            ((answer_temp.type & 0x0F) << 4);
-						sdata_index++;
-						*(pSdata+(sdata_index++)) = answer_temp.id ;
-						*(pSdata+(sdata_index++)) = answer_temp.range ;
-						is_last_data_full = 0;
-					}
-				}
-				break;
-			default:
-				break;
+			}
 		}
-	}
+		r_answer_dtq_encode( i, &(answer_cmd->len),(uint8_t *)&q_temp,
+		                     answer_cmd->buf );
+		rf_data.pack_len = answer_cmd->len + 3;
+		/* process string status, get prase data */
+		if( err != 0 )
+			break ;
 
-	if(real_total >= 1)
-	{
-		/* set rf buffer len */
-		rf_var.cmd = 0x10;
-		if(is_last_data_full == 1)
-			rf_var.tx_len = sdata_index+1 ;
-		else
-			rf_var.tx_len = sdata_index ;
-		
-		rf_var.tx_len = rf_var.tx_len + 1;
-		send_data_status = get_send_data_status();
-
-		/* 发送数据 */
-		if(( send_data_status == SEND_IDLE_STATUS ) ||
-			 ( send_data_status >= SEND_2S_DATA_STATUS))
+		real_total++;
+		if( real_total > 80 )
 		{
-			nrf_transmit_parameter_t transmit_config;
-			uint8_t status;
-
-			if(clicker_set.N_CH_RX == clicker_set.N_CH_TX )
-				clicker_set.N_CH_RX = (clicker_set.N_CH_TX + 2) % 11;
-	
-//			status  = spi_set_cpu_tx_signal_ch(clicker_set.N_CH_RX);
-//			status |= spi_set_cpu_rx_signal_ch(clicker_set.N_CH_TX);
-
-			if( status != 0 )
-			{
-				result = -1;
-			}
-			else
-			{
-				/* 准备发送数据管理块 */
-				memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
-				memset(nrf_data.dtq_uid,    0x00, 4);
-				memcpy(nrf_data.jsq_uid,    revicer.uid, 4);
-				memset(transmit_config.dist,0x00, 4);
-				send_data_process_tcb.logic_pac_add = PACKAGE_NUM_ADD;
-				send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
-				/* 启动发送数据状态机 */
-				set_send_data_status( SEND_500MS_DATA_STATUS );
-			}
+			err = -2;
+			break;
 		}
-		else
-			result = -1;
+	}while( ( p_end - pdata_str ) < str_len-3 );
+	
+  rf_data_to_spi_data( &s_data, &rf_data );
+	bsp_spi_tx_data( &s_data );
 
-		/* 打印返回 */
-		b_print("{\r\n");
-		b_print("  \"fun\": \"answer_start\",\r\n");
-		sprintf(result_str, "%d" , result);
-		b_print("  \"result\": \"%s\"\r\n",result_str);
-		b_print("}\r\n");
-	}
+	/* 打印返回 */
+	b_print("{\r\n");
+	b_print("  \"fun\": \"answer_start\",\r\n");
+	b_print("  \"result\": \"%d\"\r\n",err);
+	b_print("}\r\n");
 }
-
 
 void serial_cmd_check_config(const cJSON *object)
 {
@@ -1045,10 +848,10 @@ void serial_cmd_import_config(char *pdata_str)
 		memset(value_str,0x00,25);
 		memset(key_str,  0x00,20);
 		p_end = parse_json_item( p_next_start, key_str, value_str );
-		while(import_item_list[i].status != 0xFF)
+		while( import_item_list[i].status != 0xFF )
 		{
 			if(strncmp( key_str, import_item_list[i].key,
-				          import_item_list[i].key_str_len)== 0)
+				          import_item_list[i].str_len)== 0)
 			{
 				parse_data_status = import_item_list[i].status;
 				//printf("STATUS = %3d, KEY:%-10s  VALUE:%s \r\n",\
