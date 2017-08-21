@@ -30,7 +30,7 @@
 #include "nrf.h"
 #include "ringbuffer.h"
 
-
+#include "app_show_message_process.h"
 #include "rf_link_protocol.h"
 #include "spi_link_protocol.h"
 

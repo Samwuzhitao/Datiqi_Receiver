@@ -16,7 +16,6 @@
 void b_print(const char *fmt, ...)                                       
 {
 	uint8_t r_index = 0;
-	char *pdata;	
 	char str[256];
 	va_list args;
 
@@ -27,19 +26,21 @@ void b_print(const char *fmt, ...)
 	va_end(args);
 
 	/* JSON 剔除格式化输出字符 */
-	pdata = str;
+	
 #ifdef FILTER_NOUSE_CHAR
 	{
-		static uint8_t skip_flag = 0x00;                                                         
+		static uint8_t skip_flg = 0x00; 
+	  char *pdata = str;
+
 		while( *pdata != '\0' )
 		{
 			if( *pdata ==  '\"')
 			{
-				skip_flag = skip_flag ^ 0x01;
+				skip_flg = skip_flg ^ 0x01;
 				*pdata    = '\'';
 			}
 
-			if((skip_flag == 1) || (*pdata > 32))
+			if((skip_flg == 1) || (*pdata > 32))
 			{
 				if(*pdata != str[r_index])
 					str[r_index] = *pdata;

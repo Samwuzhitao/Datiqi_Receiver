@@ -69,5 +69,5 @@ void rf_pro_init_pack( rf_pack_t *rf_pack );
 void rf_pro_pack_update_crc( rf_pack_t *rf_pack );
 void rf_pro_pack_debug( rf_pack_t *rf_pack );
 void rf_pro_pack_num_add( rf_pack_t *rf_pack );
-
+void rf_pack_add_data( rf_pack_t *pack_a, uint8_t *buf, uint8_t len );
 #endif

@@ -64,3 +64,9 @@ void rf_pro_pack_update_crc( rf_pack_t *rf_pack )
 	rf_pack->crc_xor = XOR_Cal( array_crc, 5);
 }
 
+void rf_pack_add_data( rf_pack_t *pack_a, uint8_t *buf, uint8_t len )
+{
+	memcpy( pack_a->data+pack_a->pack_len, buf, len);
+	pack_a->pack_len = pack_a->pack_len + len;
+}
+

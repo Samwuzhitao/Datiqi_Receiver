@@ -3,10 +3,11 @@
 #include "json_decode.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "app_show_message_process.h"
 #include "app_send_data_process.h"
 #include "app_spi_send_data_process.h"
 
+hand_att_cmd_t s_hand_att_cmd = RF_CMD_HAND_ATT_DEFAULT;
+	
 extern nrf_communication_t nrf_data;
 extern uint16_t list_tcb_table[UID_LIST_TABLE_SUM][WHITE_TABLE_LEN];
 static uint8_t  answer_quenum     = 1;
@@ -16,27 +17,56 @@ static void json_decode_time        ( uint8_t *pdada, char *v_str );
 static void json_decode_answer_type ( uint8_t *pdada, char *v_str );
 static void json_decode_answer_id   ( uint8_t *pdada, char *v_str );
 static void json_decode_answer_range( uint8_t *pdada, char *v_str );
+static void json_decode_att         ( uint8_t *pdada, char *v_str );
+static void json_decode_hand        ( uint8_t *pdada, char *v_str );
 
 const json_item_t answer_list[] = {
 {"fun",        sizeof("fun"),        NULL                    },
 {"time",       sizeof("time"),       json_decode_time        },
-{"raise_hand", sizeof("raise_hand"), NULL                    },
 {"questions",  sizeof("questions"),  NULL                    },
 {"type",       sizeof("type"),       json_decode_answer_type },
 {"id",         sizeof("id"),         json_decode_answer_id   },
-{"range",      sizeof("range"),      json_decode_answer_range}
+{"range",      sizeof("range"),      json_decode_answer_range},
+{"raise_hand", sizeof("raise_hand"), json_decode_hand        },
+{"attendance", sizeof("attendance"), json_decode_att         }
 };
 
-void answer_pack_init( answer_cmd_t *answer_pack )
+static void json_decode_hand( uint8_t *pdada, char *v_str )
 {
-	is_last_data_full = 0;
-	answer_pack->cmd  = 0x10;
-	answer_pack->len  = 0;
+	hand_att_cmd_t *cmd = (hand_att_cmd_t *)pdada;
+	uint32_t temp = atoi( v_str );
+	if( temp <= 1 )
+	{
+		if( temp == 0 )
+			cmd->hand_att.bits.hand = 0;
+		else
+			cmd->hand_att.bits.hand = 1;
+	}
 }
 
-void answer_pack_quenum_add( answer_cmd_t *answer_pack )
+static void json_decode_att( uint8_t *pdada, char *v_str )
 {
-	answer_pack->que_num.bits.num = answer_quenum;
+	hand_att_cmd_t *cmd = (hand_att_cmd_t *)pdada;
+	uint32_t temp = atoi( v_str );
+	if( temp <= 1 )
+	{
+		if( temp == 0 )
+			cmd->hand_att.bits.att = 0;
+		else
+			cmd->hand_att.bits.att = 1;
+	}
+}
+
+void pack_init_answer( answer_cmd_t *cmd )
+{
+	is_last_data_full = 0;
+	cmd->cmd  = 0x10;
+	cmd->len  = 0;
+}
+
+void answer_pack_quenum_add( answer_cmd_t *cmd )
+{
+	cmd->que_num.bits.num = answer_quenum ;
 	answer_quenum = (answer_quenum + 1) % 16;
 	if(answer_quenum == 0)
 		answer_quenum = 1;
@@ -70,6 +100,7 @@ static void json_decode_time( uint8_t *pdada, char *str )
 	memcpy(str1,str+17,2);
 	system_rtc_timer.sec = atoi( str1 );
 }
+
 
 static void json_decode_answer_type( uint8_t *pdada, char *v_str )
 {
@@ -259,8 +290,8 @@ void serial_cmd_answer_start( char *json_str )
 	q_info_t  q_tmp = { 0, 0, 0 };
 	
 	rf_pack_t rf_data;
-	answer_cmd_t *as_cmd = (answer_cmd_t *)rf_data.data;
-	spi_cmd_t *s_data    = spi_malloc_buf();
+	answer_cmd_t   *as_cmd = (answer_cmd_t *)rf_data.data;
+	spi_cmd_t *s_data = spi_malloc_buf();
 
 	if( s_data != NULL )
 	{
@@ -269,7 +300,7 @@ void serial_cmd_answer_start( char *json_str )
 		rf_pro_init_pack( &rf_data );
 		rf_pro_pack_num_add( &rf_data );
 
-		answer_pack_init( as_cmd );
+		pack_init_answer( as_cmd );
 		answer_pack_quenum_add( as_cmd );
 		
 		do
@@ -283,16 +314,17 @@ void serial_cmd_answer_start( char *json_str )
 
 			for( item_t = 0; item_t < ANSWER_ITEM_NUM; item_t++ )
 			{
-				if( strncmp( key_str, answer_list[item_t].key, \
+				if( strncmp( key_str, answer_list[item_t].key, 
 						answer_list[item_t].str_len ) == 0 )
 				{
+					if( answer_list[item_t].j_fun != NULL )
 					switch( item_t )
 					{
 						case AS_TIME:
 							json_decode_time( NULL, item_str ); 
 						break;
 						case AS_QUESTION_T:
-							json_decode_answer_type( (uint8_t *)(&q_tmp), item_str );
+							answer_list[item_t].j_fun( (uint8_t *)(&q_tmp), item_str );
 						break;
 						case AS_QUESTION_I:
 							json_decode_answer_id( (uint8_t *)(&q_tmp), item_str );
@@ -304,6 +336,12 @@ void serial_cmd_answer_start( char *json_str )
 							q_num++;
 						}
 						break;
+						case AS_HAND:
+							json_decode_hand( (uint8_t *)&s_hand_att_cmd, item_str );
+							break; 
+						case AS_SIGN:
+							json_decode_att( (uint8_t *)&s_hand_att_cmd, item_str );
+							break;
 						default: break;
 					}
 					break;
@@ -316,8 +354,9 @@ void serial_cmd_answer_start( char *json_str )
 				break;
 			}
 		}while( ( p_end - json_str ) < str_len-3 );
-		
+
 		rf_data.pack_len = as_cmd->len + 3;
+		rf_pack_add_data( &rf_data, (uint8_t *)&s_hand_att_cmd, sizeof(hand_att_cmd_t));
 		rf_data_to_spi_data( s_data, &rf_data );
 	}
 	else
