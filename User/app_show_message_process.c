@@ -15,9 +15,8 @@
 ******************************************************************************/
 void b_print(const char *fmt, ...)                                       
 {
-	uint8_t r_index = 0;		
-	char *pdata;
-	static uint8_t skip_flag = 0x00;                                                         
+	uint8_t r_index = 0;
+	char *pdata;	
 	char str[256];
 	va_list args;
 
@@ -30,29 +29,33 @@ void b_print(const char *fmt, ...)
 	/* JSON 剔除格式化输出字符 */
 	pdata = str;
 #ifdef FILTER_NOUSE_CHAR
-	while( *pdata != '\0' )
 	{
-		if( *pdata ==  '\"')
+		static uint8_t skip_flag = 0x00;                                                         
+		while( *pdata != '\0' )
 		{
-			skip_flag = skip_flag ^ 0x01;
-			*pdata    = '\'';
-		}
+			if( *pdata ==  '\"')
+			{
+				skip_flag = skip_flag ^ 0x01;
+				*pdata    = '\'';
+			}
 
-		if((skip_flag == 1) || (*pdata > 32))
-		{
-			if(*pdata != str[r_index])
-				str[r_index] = *pdata;
-			pdata++;
-			r_index++;
+			if((skip_flag == 1) || (*pdata > 32))
+			{
+				if(*pdata != str[r_index])
+					str[r_index] = *pdata;
+				pdata++;
+				r_index++;
+			}
+			else
+			{
+				pdata++;
+			}
 		}
-		else
-		{
-			pdata++;
-		}
+		if( *pdata == '\0' )
+			str[r_index] = '\0';
 	}
-	if( *pdata == '\0' )
-		str[r_index] = '\0';
+#else
+	r_index = strlen(str);
 #endif
 	print_write_data_to_buffer( str, r_index );
-	
 }

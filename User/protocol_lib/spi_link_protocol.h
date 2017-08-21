@@ -17,19 +17,19 @@
 
 
 #ifdef ENABLE_SPI_DATA_DEBUG
-#define SPI_DATA_DEBUG  printf
+#define SPI_DATA_DEBUG  b_print
 #else
 #define SPI_DATA_DEBUG(...)
 #endif
 
 #ifdef ENABLE_SPI_RF_DEBUG
-#define SPI_RF_DEBUG  printf
+#define SPI_RF_DEBUG  b_print
 #else
 #define SPI_RF_DEBUG(...)
 #endif
 
 #ifdef ENABLE_SPI_STATUS_DEBUG
-#define SPI_STATUS_DEBUG  printf
+#define SPI_STATUS_DEBUG  b_print
 #else
 #define SPI_STATUS_DEBUG(...)
 #endif

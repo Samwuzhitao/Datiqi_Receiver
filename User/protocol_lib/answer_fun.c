@@ -223,13 +223,13 @@ void dtq_encode_answer( q_info_t *q_tmp, uint8_t *sbuf, uint8_t *sbuf_len )
 #ifdef ENABLE_ANSWER_ENCODE_DEBUG
 	{
 		uint8_t i;
-		printf("ANSWER_ENCMDE:");
-		printf("  ");
+		b_print("ANSWER_ENCMDE:");
+		b_print("  ");
 		for( i=0; i<*sbuf_len+19; i++ )
-			printf("   ");
+			b_print("   ");
 		for( i=0; i<s_cnt-*sbuf_len; i++ )
-			printf(" %02x", *(sbuf+*sbuf_len+i));
-		printf("\r\n");
+			b_print(" %02x", *(sbuf+*sbuf_len+i));
+		b_print("\r\n");
 	}
 #endif
 	*sbuf_len = s_cnt;

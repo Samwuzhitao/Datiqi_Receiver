@@ -14,7 +14,7 @@
 //#define ENABLE_SPI_DECODE_DEBUG
 
 #ifdef ENABLE_SPI_DECODE_DEBUG
-#define SPI_DECODE_DEBUG  printf
+#define SPI_DECODE_DEBUG  b_print
 #else
 #define SPI_DECODE_DEBUG(...)
 #endif
