@@ -37,13 +37,6 @@ typedef struct
 {
 	char    *key;
 	uint8_t str_len;
-	void    (*j_fun)( uint8_t *pdada, char *v_str );
-}json_item_t;
-
-typedef struct
-{
-	char    *key;
-	uint8_t str_len;
 	uint8_t status;
 }json_item_typedef;
 
@@ -87,6 +80,8 @@ typedef struct
 #define RF_CMD_HAND_ATT_DEFAULT         {.cmd      = 0x12,        \
                                          .len      = 0x01,        \
                                          .hand_att = 0x00,        }
+
+extern rf_pack_t rf_data;
 
 void pack_init_answer( answer_cmd_t *cmd );
 void answer_pack_quenum_add( answer_cmd_t *cmd );

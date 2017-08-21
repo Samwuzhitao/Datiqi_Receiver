@@ -1,6 +1,6 @@
 #include "main.h"
 #include "app_spi_send_data_process.h"
-#include "app_send_data_process.h"
+#include "app_rf_send_data_process.h"
 
 static uint8_t    sbuf_s = 0;
 static spi_cmd_t  sbuf[SPI_SEND_DATA_BUFFER_COUNT_MAX];
@@ -8,6 +8,7 @@ static uint16_t   sbuf_cnt_w, sbuf_cnt_r, sbuf_cnt;
 static uint8_t    retry_cnt = 0;
 spi_cmd_t  irq_rbuf[SPI_SEND_DATA_BUFFER_COUNT_MAX];
 uint16_t   irq_rbuf_cnt_w = 0, irq_rbuf_cnt_r = 0, irq_rbuf_cnt = 0;
+spi_cmd_ctl_t     r_cmd_ctl = { 0 ,0 };
 /******************************************************************************
   Function:set_spi_status
   Description:
@@ -47,15 +48,17 @@ void spi_rx_data_process( void )
 {
 	if( irq_rbuf_cnt > 0 )
 	{
-		uint8_t i;
-		printf("\t rx_buf: ");
-		printf("%02x %02x %02x %02x",                                      \
-			irq_rbuf[irq_rbuf_cnt_r].header, irq_rbuf[irq_rbuf_cnt_r].dev_t, \
-			irq_rbuf[irq_rbuf_cnt_r].cmd, irq_rbuf[irq_rbuf_cnt_r].length);
-		for( i = 0; i < irq_rbuf[irq_rbuf_cnt_r].length; i++ )
-			printf(" %02x", irq_rbuf[irq_rbuf_cnt_r].data[i]);
-		printf(" %02x %02x \r\n",
-			irq_rbuf[irq_rbuf_cnt_r].xor, irq_rbuf[irq_rbuf_cnt_r].end);
+		//uint8_t i;
+		r_cmd_ctl.cmd = irq_rbuf[irq_rbuf_cnt_r].cmd;
+		r_cmd_ctl.dev = irq_rbuf[irq_rbuf_cnt_r].dev_t;
+//		b_print("    rx_buf: ");
+//		b_print("%02x %02x %02x %02x",                                      \
+//			irq_rbuf[irq_rbuf_cnt_r].header, irq_rbuf[irq_rbuf_cnt_r].dev_t, \
+//			irq_rbuf[irq_rbuf_cnt_r].cmd, irq_rbuf[irq_rbuf_cnt_r].length);
+//		for( i = 0; i < irq_rbuf[irq_rbuf_cnt_r].length; i++ )
+//			b_print(" %02x", irq_rbuf[irq_rbuf_cnt_r].data[i]);
+//		b_print(" %02x %02x \r\n",
+//			irq_rbuf[irq_rbuf_cnt_r].xor, irq_rbuf[irq_rbuf_cnt_r].end);
 		irq_rbuf_cnt--;
 		irq_rbuf_cnt_r = (irq_rbuf_cnt_r + 1) % SPI_SEND_DATA_BUFFER_COUNT_MAX;
 	}
@@ -63,6 +66,8 @@ void spi_rx_data_process( void )
 
 void spi_tx_data_process(void)
 {
+	static uint8_t ack_flg;
+
 	if( sbuf_s == 0 )
 	{
 		if( sbuf_cnt > 0 )
@@ -70,13 +75,22 @@ void spi_tx_data_process(void)
 			bsp_spi_tx_data( &sbuf[sbuf_cnt_r] );
 			set_spi_status(1);
 		}
+		return;
+	}
+	
+	if( sbuf_s == 1 )
+	{
+		ack_flg = spi_cmd_ack_check( &r_cmd_ctl );
+		if( ack_flg == 1 )
+		{
+			sw_clear_timer( &spi_send_data1_timer );
+			set_spi_status( 2 );
+		}
 	}
 
 	if( sbuf_s == 2 )
 	{
-		uint8_t spi_ack_flag = 0;
-
-		if( spi_ack_flag == 1 )
+		if( ack_flg == 1 )
 		{
 			sbuf_cnt--;
 			sbuf_cnt_r = (sbuf_cnt_r + 1) % SPI_SEND_DATA_BUFFER_COUNT_MAX;
@@ -94,6 +108,7 @@ void spi_tx_data_process(void)
 			}
 			set_spi_status(0);
 		}
+		return;
 	}
 }
 
@@ -117,7 +132,7 @@ void sbuf_s_1_timer_init( void )
 
 void spi_timer_init( void )
 {
-    sw_create_timer( &spi_send_data1_timer , 3, 1, 2,&(sbuf_s), sbuf_s_1_timer_init );
+    sw_create_timer( &spi_send_data1_timer , 5, 1, 2,&(sbuf_s), sbuf_s_1_timer_init );
 //sw_create_timer( &spi_send_data2_timer , delay1_ms, 2, 3,&(sbuf_s), sbuf_s_1_timer_init );
 }
 
@@ -130,9 +145,9 @@ void spi_timer_init( void )
 ******************************************************************************/
 void spi_write_data_to_buf( u8 *buf, u8 len, u8 cnt, u8 us, u8 ms )
 {
-	spi_pro_init_pack( &sbuf[sbuf_cnt_w], DEVICE_TX, 0x10);
+	spi_pro_init_pack( &sbuf[sbuf_cnt_w], DEVICE_TX, 0x10 );
 	sbuf[sbuf_cnt_w].length = len;
-	memcpy( sbuf[sbuf_cnt_w].data, buf, len);
+	memcpy( sbuf[sbuf_cnt_w].data, buf, len );
 	spi_pro_pack_update_crc( &sbuf[sbuf_cnt_w] );
 	sbuf_cnt_w = (sbuf_cnt_w + 1) % SPI_SEND_DATA_BUFFER_COUNT_MAX;
 	sbuf_cnt++;

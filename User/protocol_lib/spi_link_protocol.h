@@ -102,10 +102,17 @@ typedef struct
 	uint8_t 	end;
 } spi_cmd_t;
 
+typedef struct
+{
+	uint8_t   cmd;
+	spi_dev_t dev;
+}spi_cmd_ctl_t;
+
 /* Private functions ---------------------------------------------------------*/
 void    spi_pro_init_pack( spi_cmd_t *spi_scmd, spi_dev_t dev_t, uint8_t cmd );
 void    spi_pro_pack_update_crc( spi_cmd_t *spi_scmd );
 void    rf_data_to_spi_data    ( spi_cmd_t *spi_data, rf_pack_t *rf_data );
 uint8_t bsp_spi_tx_data        ( spi_cmd_t *spi_scmd );
 uint8_t bsp_spi_rx_data        ( uint32_t irq, spi_cmd_t *spi_rcmd );
+uint8_t spi_cmd_ack_check( spi_cmd_ctl_t *r_cmd_ctl );
 #endif

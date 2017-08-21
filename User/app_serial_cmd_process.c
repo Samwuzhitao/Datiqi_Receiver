@@ -18,12 +18,13 @@
 #include <stdio.h>
 #include "main.h"
 #include "cJSON.h"
-#include "app_send_data_process.h"
+#include "app_rf_send_data_process.h"
 #include "app_spi_send_data_process.h"
 #include "app_card_process.h"
 #include "app_show_message_process.h"
-#include "answer_fun.h"
 #include "json_decode.h"
+#include "answer_fun.h"
+#include "bind_fun.h"
 
 typedef  void (*pFunction)(void);
 
@@ -44,7 +45,6 @@ extern task_tcb_typedef card_task;
 
 const static serial_cmd_typedef cmd_list[] = {
 {"clear_wl",       sizeof("clear_wl"),       serial_cmd_clear_uid_list},
-{"bind",           sizeof("bind")-1,         serial_cmd_bind_operation},
 {"answer_stop",    sizeof("answer_stop"),    serial_cmd_answer_stop   },
 {"get_device_info",sizeof("get_device_info"),serial_cmd_get_device_no },
 {"set_channel",    sizeof("set_channel"),    serial_cmd_set_channel   },
@@ -59,19 +59,6 @@ const static serial_cmd_typedef cmd_list[] = {
 {"set_sign_in",    sizeof("set_sign_in"),    serial_cmd_raise_hand_sign_in_set},
 {"dtq_debug_set",  sizeof("dtq_debug_set"),  serial_cmd_dtq_debug_set},
 {"NO_USE",         sizeof("NO_USE"),         NULL                     }
-};
-
-const static json_item_typedef import_item_list[] = {
-{"fun",            sizeof("fun"),            IMPORT_STATUS_FUN},
-{"addr",           sizeof("addr"),           IMPORT_STATUS_ADDR},
-{"tx_ch",          sizeof("tx_ch"),          IMPORT_STATUS_TX_CH},
-{"rx_ch",          sizeof("rx_ch"),          IMPORT_STATUS_RX_CH},
-{"tx_power",       sizeof("tx_power"),       IMPORT_STATUS_TX_POWER},
-{"list",           sizeof("list"),           IMPORT_STATUS_LIST},
-{"upos",           sizeof("upos"),           IMPORT_STATUS_UPOS},
-{"uid",            sizeof("uid"),            IMPORT_STATUS_UID},
-{"pro_index",      sizeof("pro_index"),      IMPORT_STATUS_ATT},
-{"over",           sizeof("over"),           0xFF}
 };
 
 static void uart_update_answers(void);
@@ -109,9 +96,9 @@ void uart_cmd_decode(void)
 		{
 			serial_cmd_answer_start( pdata );
 		}
-		else if( strncmp( header, "import_config", sizeof("import_config")-1)== 0 )
+		else if( strncmp( header, "bind_start", sizeof("bind_start")-1)== 0 )
 		{
-			serial_cmd_import_config( pdata );
+			serial_cmd_wireless_bind_start( pdata );
 		}
 		else
 		{
@@ -343,20 +330,13 @@ static void uart_update_answers(void)
 
 void serial_cmd_clear_uid_list(const cJSON *object)
 {
-	uint8_t result = 0;
-
-	result = initialize_white_list();
+	uint8_t err = initialize_white_list();
 	EE_WriteVariable(CPU_ADDR_CLONE_FLAG,0);
 	get_mcu_uid();
-	
+
 	b_print("{\r\n");
 	b_print("  \"fun\": \"clear_wl\",\r\n");
-
-	if(OPERATION_SUCCESS == result)
-		b_print("  \"result\": \"0\"\r\n");
-	else
-		b_print("  \"result\": \"-1\"\r\n");
-
+	b_print("  \"result\": \"%d\"\r\n",(err==OPERATION_SUCCESS)?0:-1);
 	b_print("}\r\n");
 }
 
@@ -464,8 +444,8 @@ void serial_cmd_one_key_off(const cJSON *object)
 		memset(nrf_data.dtq_uid,    0x00, 4);
 		memcpy(nrf_data.jsq_uid,    revicer.uid, 4);
 		memset(transmit_config.dist,0x00, 4);
-		send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
-		send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
+		//send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
+		//send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
 
 		/* 启动发送数据状态机 */
 		set_send_data_status( SEND_500MS_DATA_STATUS );
@@ -648,8 +628,8 @@ void serial_cmd_raise_hand_sign_in_set(const cJSON *object)
 	memset(nrf_data.dtq_uid,    0x00, 4);
 	memcpy(nrf_data.jsq_uid,    revicer.uid, 4);
 	memset(transmit_config.dist,0x00, 4);
-	send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
-	send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
+	//send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
+	//send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
 
 	/* 启动发送数据状态机 */
 	set_send_data_status( SEND_500MS_DATA_STATUS );
@@ -717,176 +697,7 @@ void serial_cmd_check_config(const cJSON *object)
 	b_print("}\r\n");
 }
 
-void serial_cmd_import_config(char *pdata_str)
-{
-	/* prase data control */ 
-	char *p_end,*p_next_start; 
-	char value_str[25],key_str[20];
-	uint8_t parse_data_status = 0;
-	uint16_t len = strlen(pdata_str);
-	uint16_t upos;
-	uint32_t uid;
-	uint8_t count = 0;
 
-	/* print result */
-	char   result_str[3];
-	int8_t result = 0;
-
-	result = initialize_white_list();
-
-	/* prase the first key and value */
-	p_end = parse_json_item( pdata_str, key_str, value_str );
-
-	while( (p_end - pdata_str) < len-3 )
-	{
-		uint8_t i = 0;
-		p_next_start = p_end;
-		
-		/* prase next key and value, and get string status*/
-		memset(value_str,0x00,25);
-		memset(key_str,  0x00,20);
-		p_end = parse_json_item( p_next_start, key_str, value_str );
-		while( import_item_list[i].status != 0xFF )
-		{
-			if(strncmp( key_str, import_item_list[i].key,
-				          import_item_list[i].str_len)== 0)
-			{
-				parse_data_status = import_item_list[i].status;
-				//printf("STATUS = %3d, KEY:%-10s  VALUE:%s \r\n",\
-				          parse_data_status,key_str,value_str);
-				i = 0;
-				break;
-			}
-			i++;
-		}
-
-		/* process string status, get prase data */
-		if( result != 0 )
-			break ;
-		
-		switch( parse_data_status )
-		{
-			
-			case IMPORT_STATUS_FUN:
-				break;
-			case IMPORT_STATUS_ADDR:
-				{
-					uint32_t uid;
-					uid = atof(value_str);
-					memcpy(revicer.uid,(uint8_t *)&uid,4);
-					EE_WriteVariable(CPU_ADDR_CLONE_FLAG,1);
-					EE_WriteVariable(CPU_CLONE_ADDR+0,revicer.uid[0]);
-					EE_WriteVariable(CPU_CLONE_ADDR+1,revicer.uid[1]);
-					EE_WriteVariable(CPU_CLONE_ADDR+2,revicer.uid[2]);
-					EE_WriteVariable(CPU_CLONE_ADDR+3,revicer.uid[3]);
-				}
-				break;
-			case IMPORT_STATUS_TX_CH:
-				{
-					uint8_t tx_ch;
-					tx_ch = atoi(value_str);
-
-					if(( tx_ch > 1) && ( tx_ch < 11))
-					{
-						clicker_set.N_CH_TX = tx_ch;
-
-						/* 设置接收的信道：答题器与接收是反的 */
-						//spi_set_cpu_rx_signal_ch(clicker_set.N_CH_TX);
-						result = 0;
-					}
-					else
-					{
-						result = -1;
-					}
-				}
-				break;
-			case IMPORT_STATUS_RX_CH:
-				{
-					uint8_t rx_ch = atoi(value_str);
-					if((( rx_ch > 1) && ( rx_ch < 11)))
-					{
-						clicker_set.N_CH_RX = rx_ch;
-
-						/* 设置接收的信道：答题器与接收是反的 */
-						//spi_set_cpu_tx_signal_ch(clicker_set.N_CH_RX);
-						result = 0;
-					}
-					else
-					{
-						result = -1;
-					}
-				}
-				break;
-			case IMPORT_STATUS_TX_POWER:
-				{
-					uint8_t tx_power = atoi(value_str);
-					if(( tx_power >= 1) && ( tx_power <= 5))
-						{
-							clicker_set.N_TX_POWER = tx_power;
-							EE_WriteVariable( CPU_TX_POWER_POS_OF_FEE , clicker_set.N_TX_POWER );
-							result = 0;
-						}
-						else
-						{
-							result = -1;
-						}
-				}
-				break;
-				case IMPORT_STATUS_ATT:
-				{
-					uint8_t pro_index = atoi(value_str);
-					if( pro_index <= 12)
-					{
-						clicker_set.N_24G_ATTEND = pro_index | 0x80;
-						EE_WriteVariable( CPU_24G_ATTENDANCE_OF_FEE , clicker_set.N_24G_ATTEND );
-						result = 0;
-					}
-					else
-					{
-						result = -1;
-					}
-				}
-				break;
-			case IMPORT_STATUS_UPOS: 
-				{
-					upos = atoi(value_str);
-					if(upos >= MAX_WHITE_LEN)
-						result = -1;
-				}
-				break;
-			case IMPORT_STATUS_UID: 
-				{
-					uint8_t *pdata,is_white_list_uid;
-					uint16_t uid_pos;
-					if(count <= MAX_WHITE_LEN)
-					{
-						uid = atof(value_str);
-						pdata = (uint8_t *)&uid;
-						is_white_list_uid = search_uid_in_white_list((uint8_t *)&uid,&uid_pos);
-						if(is_white_list_uid == OPERATION_ERR)
-						{
-							add_index_of_uid(upos,pdata);
-							count++;
-						}
-					}
-					else
-					{
-						result = -1;
-					}
-				}
-				break;
-			default:
-				break;
-		}
-	}
-
-	/* 打印返回 */
-	b_print("{\r\n");
-	b_print("  \"fun\": \"import_config\",\r\n");
-	sprintf(result_str, "%d" , result);
-	b_print("  \"result\": \"%s\"\r\n",result_str);
-	b_print("}\r\n");
-}
 
 void serial_cmd_bootloader(const cJSON *object)
 {
@@ -995,8 +806,8 @@ void serial_cmd_self_inspection(const cJSON *object)
 		memset(nrf_data.dtq_uid,    0x00, 4);
 		memset(nrf_data.jsq_uid,    0x00, 4);
 		memset(transmit_config.dist,0x00, 4);
-		send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
-		send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
+		//send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
+		//send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
 
 		/* 启动发送数据状态机 */
 		set_send_data_status( SEND_500MS_DATA_STATUS );

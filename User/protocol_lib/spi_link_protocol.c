@@ -10,6 +10,8 @@
 #include "main.h"
 /* Private variables ---------------------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
+spi_cmd_ctl_t     s_cmd_ctl = { 0, 0 };
+
 static uint8_t hal_nrf_rw(SPI_TypeDef* SPIx, uint8_t value)
 {
 	while(SPI_I2S_GetFlagStatus(SPIx, SPI_I2S_FLAG_TXE) == RESET);
@@ -240,7 +242,9 @@ uint8_t bsp_spi_tx_data( spi_cmd_t *spi_scmd )
 	uint8_t tx_s = 0, tx_cnt = 0;
 	typedef  void (*spi_get_char)(uint8_t data);
 	spi_get_char pfun;
-
+	s_cmd_ctl.cmd = spi_scmd->cmd;
+	s_cmd_ctl.dev = spi_scmd->dev_t;
+	
 	if( spi_scmd->dev_t == DEVICE_TX )
 	{
 		SPI_DATA_DEBUG("[TX]s :");
@@ -294,4 +298,14 @@ uint8_t bsp_spi_tx_data( spi_cmd_t *spi_scmd )
 	return 0;
 }
 
+uint8_t spi_cmd_ack_check( spi_cmd_ctl_t *r_cmd_ctl )
+{
+	if((r_cmd_ctl->dev == s_cmd_ctl.dev) &&
+		 (r_cmd_ctl->cmd == s_cmd_ctl.cmd) &&
+	   (s_cmd_ctl.cmd != 0)
+	  )
+		return 1;
+	else
+		return 0;
+}
 
