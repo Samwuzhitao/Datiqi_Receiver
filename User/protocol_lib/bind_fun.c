@@ -54,7 +54,7 @@ void serial_cmd_wireless_bind_start( char *json_str )
 		for( item_t = 0; item_t < BIND_ITEM_NUM; item_t++ )
 		{
 			if( strncmp( key_str, bind_list[item_t].key,
-															 bind_list[item_t].str_len ) == 0 )
+									 bind_list[item_t].str_len ) == 0 )
 			{
 				if( bind_list[item_t].j_fun != NULL )
 				switch( item_t )
@@ -96,7 +96,6 @@ void serial_cmd_wireless_bind_start( char *json_str )
 		case 2: // 无线自动
 		{
 			spi_cmd_t *s_data = spi_malloc_buf();
-			spi_pro_init_pack( s_data, DEVICE_TX,  0x10);
 			rf_pro_init_pack( &rf_data );
 			rf_pro_pack_num_add( &rf_data );
 			err = initialize_white_list();

@@ -9,9 +9,25 @@
   */
 
 #include "main.h"
+#include "answer_fun.h"
+#include "json_decode.h"
+#include "app_spi_send_data_process.h"
+
 extern revicer_typedef   revicer;
 
 static uint8_t seq_num = 1, pac_num = 1;
+static uint8_t send_cmd_s = 0;
+	
+int8_t rf_send_data_start( void )
+{
+	if((send_cmd_s == 0) || (send_cmd_s >= 4))
+	{
+		send_cmd_s = 1;
+		return 0;
+	}
+	else
+		return -1;
+}
 
 void rf_pro_pack_num_add( rf_pack_t *rf_pack )
 {
@@ -68,5 +84,56 @@ void rf_pack_add_data( rf_pack_t *pack_a, uint8_t *buf, uint8_t len )
 {
 	memcpy( pack_a->data+pack_a->pack_len, buf, len);
 	pack_a->pack_len = pack_a->pack_len + len;
+}
+
+void rf_s_cmd_process( void )
+{
+	if( send_cmd_s == 1 )
+	{
+		spi_cmd_t *s_data = spi_malloc_buf();
+		spi_pro_init_pack_rf( s_data, RF_DATA_WITH_PRE, 0x04 );
+		rf_data_to_spi_data( s_data, &rf_data );
+		send_cmd_s = 2;
+		return;
+	}
+	
+	if( send_cmd_s == 4 )
+	{
+		spi_cmd_t *s_data = spi_malloc_buf();
+		spi_pro_init_pack_rf( s_data, RF_DATA_WITH_PRE, 0x04 );
+		rf_data_to_spi_data( s_data, &rf_data );
+		send_cmd_s = 5;
+		return;
+	}
+}
+
+void r_send_2_cb( void )
+{
+    send_cmd_s = 4;
+}
+
+void r_send_1_cb( void )
+{
+    static uint8_t send_count = 0;
+    send_count++;
+    send_cmd_s = 1;
+    if( send_count == 4 )
+    {
+        send_cmd_s = 4;
+        send_count = 0;
+    }
+}
+/******************************************************************************
+  Function:send_data_process_timer_init
+  Description:
+        发送过程中的定时器初始化
+  Input :
+  Return:
+  Others:None
+******************************************************************************/
+void send_data_process_timer_init( void )
+{
+  sw_create_timer(&retransmit_500ms_timer , 300, 2, 3, &(send_cmd_s), r_send_1_cb );
+  sw_create_timer(&retransmit_2s_timer    ,1000, 5, 6, &(send_cmd_s), r_send_2_cb );
 }
 

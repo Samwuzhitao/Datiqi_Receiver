@@ -28,6 +28,15 @@
 #define RF_PACK_SOF                   (0x61)
 #define RF_PACK_EOF                   (0x21)
 
+/* ×´Ì¬ */
+#define SEND_IDLE_STATUS                0
+#define SEND_300MS_DATA_STATUS          (SEND_IDLE_STATUS+1)
+#define SEND_300MS_TIMER_START_STATUS   (SEND_300MS_DATA_STATUS+1)
+#define SEND_300MS_TIMER_TIMEOUT_STATUS (SEND_300MS_TIMER_START_STATUS+1)
+#define SEND_1S_DATA_STATUS             (SEND_300MS_TIMER_TIMEOUT_STATUS+1)
+#define SEND_1S_TIMER_START_STATUS      (SEND_1S_DATA_STATUS+1)
+#define SEND_1S_TIMER_TIMEOUT_STATUS    (SEND_1S_TIMER_START_STATUS+1)
+
 typedef enum {
 	DEVICE_JSQ = 0x01, // 0x01:STM32
 	DEVICE_DTQ = 0x11, // 0x11:´ðÌâÆ÷
@@ -70,4 +79,8 @@ void rf_pro_pack_update_crc( rf_pack_t *rf_pack );
 void rf_pro_pack_debug( rf_pack_t *rf_pack );
 void rf_pro_pack_num_add( rf_pack_t *rf_pack );
 void rf_pack_add_data( rf_pack_t *pack_a, uint8_t *buf, uint8_t len );
+
+int8_t rf_send_data_start( void );
+void   rf_s_cmd_process( void );
+
 #endif

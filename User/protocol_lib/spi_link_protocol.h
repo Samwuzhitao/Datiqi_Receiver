@@ -42,6 +42,10 @@
 #define RF_ADDR_CH                      (0)
 #define RF_ADDR_TX_POWER                (1)	
 
+#define RF_DATA_WITH_PRE                (1)
+#define RF_DATA_NO_PRE                  (2)
+#define RF_ACK                          (3)
+
 /* ∑¢ÀÕ∂Àƒ¨»œ≈‰÷√ ************************************************/
 #define RF_TX_CH_DEFAULT_CONF           {.len    = 2,             \
                                          .t_buf  = { 0x02, 0x05 } }
@@ -109,7 +113,8 @@ typedef struct
 }spi_cmd_ctl_t;
 
 /* Private functions ---------------------------------------------------------*/
-void    spi_pro_init_pack( spi_cmd_t *spi_scmd, spi_dev_t dev_t, uint8_t cmd );
+void spi_pro_init_pack_set( spi_cmd_t *spi_scmd, spi_dev_t dev_t );
+void spi_pro_init_pack_rf( spi_cmd_t *spi_scmd, uint8_t data_t, uint8_t tx_ch );
 void    spi_pro_pack_update_crc( spi_cmd_t *spi_scmd );
 void    rf_data_to_spi_data    ( spi_cmd_t *spi_data, rf_pack_t *rf_data );
 uint8_t bsp_spi_tx_data        ( spi_cmd_t *spi_scmd );

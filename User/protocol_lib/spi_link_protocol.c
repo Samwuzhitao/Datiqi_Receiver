@@ -56,13 +56,24 @@ static uint8_t spi_rx_get_char( void )
 	return r_char;
 }
 
-void spi_pro_init_pack( spi_cmd_t *spi_scmd, spi_dev_t dev_t, uint8_t cmd )
+void spi_pro_init_pack_set( spi_cmd_t *spi_scmd, spi_dev_t dev_t )
 {
 	spi_scmd->header = SPI_PACK_SOF;
 	spi_scmd->end    = SPI_PACK_EOF;
 	spi_scmd->length = 0;
 	spi_scmd->dev_t  = dev_t;
-	spi_scmd->cmd    = cmd;
+	spi_scmd->cmd    = 0x20;
+}
+
+void spi_pro_init_pack_rf( spi_cmd_t *spi_scmd, uint8_t data_t, uint8_t tx_ch )
+{
+	spi_scmd->header  = SPI_PACK_SOF;
+	spi_scmd->end     = SPI_PACK_EOF;
+	spi_scmd->length  = 2;
+	spi_scmd->dev_t   = DEVICE_TX;
+	spi_scmd->cmd     = 0x23;
+	spi_scmd->data[0] = data_t & 0x03;
+	spi_scmd->data[1] = tx_ch & 0x7f;
 }
 
 void spi_pro_pack_update_crc( spi_cmd_t *spi_scmd )
@@ -74,11 +85,11 @@ void spi_pro_pack_update_crc( spi_cmd_t *spi_scmd )
 void rf_data_to_spi_data( spi_cmd_t *spi_data, rf_pack_t *rf_pack )
 {
 	uint8_t i;
-	uint8_t *pdata = spi_data->data;
+	uint8_t *pdata = spi_data->data + spi_data->length;
 	rf_pro_pack_update_crc( rf_pack );
 
 	SPI_RF_DEBUG("\r\n[RF]s :");
-	SPI_RF_DEBUG(" %14x", rf_pack->head);
+	SPI_RF_DEBUG(" %20x", rf_pack->head);
 	*(pdata++) = rf_pack->head;
 	SPI_DECODE_DEBUG("\r\nSEC_UID:\t");
 	SPI_RF_DEBUG(" %02x %02x %02x %02x", rf_pack->ctl.src_uid[0],
@@ -127,7 +138,7 @@ void rf_data_to_spi_data( spi_cmd_t *spi_data, rf_pack_t *rf_pack )
 	SPI_RF_DEBUG(" %02x\r\n", rf_pack->end);
 	*(pdata++) = rf_pack->end;
 
-	spi_data->length = rf_pack->pack_len + \
+	spi_data->length = spi_data->length + rf_pack->pack_len + \
 		rf_pack->rev_len + sizeof(rf_pack_ctl_t) + 2 + 3;
 
 	spi_pro_pack_update_crc( spi_data );

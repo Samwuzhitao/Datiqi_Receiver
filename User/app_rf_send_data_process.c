@@ -124,80 +124,42 @@ void spi_process_revice_data( void )
 ******************************************************************************/
 void App_clickers_send_data_process( void )
 {
-    spi_process_revice_data();
+//    spi_process_revice_data();
 
-    if(( send_data_status == SEND_500MS_DATA_STATUS )||
-         ( send_data_status == SEND_2S_DATA_STATUS    ))
-    {
-        if( send_data_status == SEND_2S_DATA_STATUS    )
-        {
-            uint8_t status = 0;
-            static uint8_t err_count = 0;
+////    if(( send_data_status == SEND_500MS_DATA_STATUS )||
+//         ( send_data_status == SEND_2S_DATA_STATUS    ))
+//    {
+//        if( send_data_status == SEND_2S_DATA_STATUS    )
+//        {
+//            uint8_t status = 0;
+//            static uint8_t err_count = 0;
 
-            if( status != 0 )
-            {
-                nrf1_rst_init();
-                nrf2_rst_init();
-                NRF_RX_RST_LOW();
-                NRF_TX_RST_LOW();
-                DelayMs(50);
-                NRF_RX_RST_HIGH();
-                NRF_TX_RST_HIGH();
-                nrf1_rst_deinit();
-                nrf2_rst_deinit();
-                err_count++;
-                if( err_count >= 10)
-                {
-                    err_count = 0;
-                    send_data_status = 0;
-                }
-            }
-            else
-                err_count = 0;
-        }
+//            if( status != 0 )
+//            {
+//                nrf1_rst_init();
+//                nrf2_rst_init();
+//                NRF_RX_RST_LOW();
+//                NRF_TX_RST_LOW();
+//                DelayMs(50);
+//                NRF_RX_RST_HIGH();
+//                NRF_TX_RST_HIGH();
+//                nrf1_rst_deinit();
+//                nrf2_rst_deinit();
+//                err_count++;
+//                if( err_count >= 10)
+//                {
+//                    err_count = 0;
+//                    send_data_status = 0;
+//                }
+//            }
+//            else
+//                err_count = 0;
+//        }
 
-        send_data_status = send_data_status + 1;
-    }
+//        send_data_status = send_data_status + 1;
+//    }
 }
 
-void retransmit_2s_timer_callback( void )
-{
-    send_data_status = SEND_2S_DATA_STATUS;
-}
 
-void retransmit_500ms_timer_callback( void )
-{
-    static uint8_t send_count = 0;
-    send_count++;
-    send_data_status = SEND_500MS_DATA_STATUS;
-    if( send_count == 4 )
-    {
-        send_data_status = SEND_2S_DATA_STATUS;
-        send_count = 0;
-    }
-}
 
-/******************************************************************************
-  Function:send_data_process_timer_init
-  Description:
-        发送过程中的定时器初始化
-  Input :
-  Return:
-  Others:None
-******************************************************************************/
-void send_data_process_timer_init( void )
-{
-    /* create send data timer */
-    sw_create_timer(&retransmit_500ms_timer ,        // timer
-                    300,                             // timeout (ms)
-                    SEND_500MS_TIMER_START_STATUS,   // start status
-                    SEND_500MS_TIMER_TIMEOUT_STATUS, // timeout status
-                    &(send_data_status),             // status mechine
-                    retransmit_500ms_timer_callback);// timerout callback
-    sw_create_timer(&retransmit_2s_timer    ,
-                    1000,
-                    SEND_2S_TIMER_START_STATUS,
-                    SEND_2S_TIMER_TIMEOUT_STATUS,
-                    &(send_data_status),
-                    retransmit_2s_timer_callback);
-}
+

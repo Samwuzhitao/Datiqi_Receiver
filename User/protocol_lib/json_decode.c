@@ -49,6 +49,6 @@ char *parse_json_item( char *pdata_str, char *key_str, char *value_str )
 	}
 	pdata++;
 	value_str[i] = '\0';
-  printf("KEY:%15s  VALUE:%s \r\n",key_str,value_str);
+  //printf("KEY:%15s  VALUE:%s \r\n",key_str,value_str);
 	return (pdata);
 }

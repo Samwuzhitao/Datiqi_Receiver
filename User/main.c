@@ -33,8 +33,8 @@ int main(void)
 
 	while(1)
 	{	
-		/*clickers send data process */
-		App_clickers_send_data_process();
+		/*rf send data process */
+		rf_s_cmd_process();
 
 		/* serial cmd processing process */
 		App_seirial_cmd_process();

@@ -8,6 +8,7 @@
 
 #define BIND_ITEM_NUM           4
 
+
 void serial_cmd_wireless_bind_start( char *json_str );
 
 #endif

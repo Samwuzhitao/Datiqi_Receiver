@@ -42,23 +42,23 @@ extern wl_typedef       wl;
 extern revicer_typedef  revicer;
 extern task_tcb_typedef card_task;
 /* Private functions ---------------------------------------------------------*/
-
 const static serial_cmd_typedef cmd_list[] = {
-{"clear_wl",       sizeof("clear_wl"),       serial_cmd_clear_uid_list},
-{"answer_stop",    sizeof("answer_stop"),    serial_cmd_answer_stop   },
-{"get_device_info",sizeof("get_device_info"),serial_cmd_get_device_no },
-{"set_channel",    sizeof("set_channel"),    serial_cmd_set_channel   },
-{"set_tx_power",   sizeof("set_tx_power"),   serial_cmd_set_tx_power  },
-{"check_config",   sizeof("check_config"),   serial_cmd_check_config  },
-{"set_student_id", sizeof("set_student_id"), serial_cmd_set_student_id},
-{"one_key_off",    sizeof("one_key_off"),    serial_cmd_one_key_off   },
-{"bootloader",     sizeof("bootloader"),     serial_cmd_bootloader    },
-{"attendance_24g", sizeof("attendance_24g"), serial_cmd_attendance_24g},
-{"dtq_self_inspection",sizeof("dtq_self_inspection"),serial_cmd_self_inspection},
-{"set_raise_hand", sizeof("set_raise_hand"), serial_cmd_raise_hand_sign_in_set},
-{"set_sign_in",    sizeof("set_sign_in"),    serial_cmd_raise_hand_sign_in_set},
-{"dtq_debug_set",  sizeof("dtq_debug_set"),  serial_cmd_dtq_debug_set},
-{"NO_USE",         sizeof("NO_USE"),         NULL                     }
+{"clear_wl",           sizeof("clear_wl"),           serial_cmd_clear_uid_list        },
+{"answer_stop",        sizeof("answer_stop"),        serial_cmd_answer_stop           },
+{"bind_stop",          sizeof("bind_stop"),          serial_cmd_bind_stop             },
+{"get_device_info",    sizeof("get_device_info"),    serial_cmd_get_device_no         },
+{"set_channel",        sizeof("set_channel"),        serial_cmd_set_channel           },
+{"set_tx_power",       sizeof("set_tx_power"),       serial_cmd_set_tx_power          },
+{"check_config",       sizeof("check_config"),       serial_cmd_check_config          },
+{"set_student_id",     sizeof("set_student_id"),     serial_cmd_set_student_id        },
+{"one_key_off",        sizeof("one_key_off"),        serial_cmd_one_key_off           },
+{"bootloader",         sizeof("bootloader"),         serial_cmd_bootloader            },
+{"attendance_24g",     sizeof("attendance_24g"),     serial_cmd_attendance_24g        },
+{"set_raise_hand",     sizeof("set_raise_hand"),     serial_cmd_raise_hand_sign_in_set},
+{"set_sign_in",        sizeof("set_sign_in"),        serial_cmd_raise_hand_sign_in_set},
+{"dtq_debug_set",      sizeof("dtq_debug_set"),      serial_cmd_dtq_debug_set         },
+{"dtq_self_inspection",sizeof("dtq_self_inspection"),serial_cmd_self_inspection       },
+{"NO_USE",             sizeof("NO_USE"),             NULL                             }
 };
 
 static void uart_update_answers(void);
@@ -340,35 +340,20 @@ void serial_cmd_clear_uid_list(const cJSON *object)
 	b_print("}\r\n");
 }
 
-void serial_cmd_bind_operation(const cJSON *object)
+void serial_cmd_bind_stop(const cJSON *object)
 {
-	uint8_t card_status = 0;
-	char *p_cmd_str = cJSON_GetObjectItem(object, "fun")->valuestring;
-	
-	card_status = rf_get_card_status();
-	b_print("{\r\n");
-
-	if(strncmp( p_cmd_str, "bind_start", 10) == 0)
-	{
-		wl.match_status = ON;
-		rf_set_card_status(1);
-		b_print("  \"fun\": \"bind_start\",\r\n");
-		if( card_status == 0 )
-			b_print("  \"result\": \"0\"\r\n");
-		else
-			b_print("  \"result\": \"-1\"\r\n");
-	}
-
-	if(strncmp( p_cmd_str, "bind_stop", 9 ) == 0)
+	uint8_t card_status = rf_get_card_status();
+	if( card_status == 0 )
 	{
 		wl.match_status = OFF;
 		rf_set_card_status(0);
 		PcdHalt();
 		PcdAntennaOff();
+		b_print("{\r\n");
 		b_print("  \"fun\": \"bind_stop\",\r\n");
 		b_print("  \"result\": \"0\"\r\n");
+		b_print("}\r\n");
 	}
-	b_print("}\r\n");
 }
 
 void serial_cmd_get_device_no(const cJSON *object)
@@ -448,7 +433,7 @@ void serial_cmd_one_key_off(const cJSON *object)
 		//send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
 
 		/* 启动发送数据状态机 */
-		set_send_data_status( SEND_500MS_DATA_STATUS );
+		//set_send_data_status( SEND_500MS_DATA_STATUS );
 	}
 
 	b_print("{\r\n");
@@ -632,7 +617,7 @@ void serial_cmd_raise_hand_sign_in_set(const cJSON *object)
 	//send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
 
 	/* 启动发送数据状态机 */
-	set_send_data_status( SEND_500MS_DATA_STATUS );
+	//set_send_data_status( SEND_500MS_DATA_STATUS );
 
 	b_print("  \"result\": \"0\"\r\n");
 	b_print("}\r\n");
@@ -810,7 +795,7 @@ void serial_cmd_self_inspection(const cJSON *object)
 		//send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
 
 		/* 启动发送数据状态机 */
-		set_send_data_status( SEND_500MS_DATA_STATUS );
+		//set_send_data_status( SEND_500MS_DATA_STATUS );
 		dtq_self_inspection_flg = 1;
 	}
 	
@@ -820,11 +805,35 @@ void serial_cmd_self_inspection(const cJSON *object)
 	b_print("  \"fun\": \"dtq_self_inspection\",\r\n");
 	switch(rf_status)
 	{
-		case 0: b_print("  \"tx_rx_check\": \"OK\",\r\n"); break;
-		case 1: b_print("  \"tx_rx_check\": \"DEVICE ERROR\",\r\n"); break;
+		case 0:  b_print("  \"tx_rx_check\": \"OK\",\r\n"); break;
+		case 1:  b_print("  \"tx_rx_check\": \"DEVICE ERROR\",\r\n"); break;
 		default: b_print("  \"tx_rx_check\": \"FIRMWARE ERROR\",\r\n"); break;
 	}
 	b_print("  \"result\": \"0\"\r\n");
 	b_print("}\r\n");
 }
+
+void serial_cmd_answer_stop(const cJSON *object)
+{
+    uint8_t sdata_index;
+    uint8_t *pSdata;
+    pSdata = (uint8_t *)rf_var.tx_buf+1;
+    *(pSdata+(sdata_index++)) = 0x01;
+    rf_var.cmd = 0x11;
+    rf_var.tx_len = sdata_index+2 ;
+    {
+        nrf_transmit_parameter_t transmit_config;
+        memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
+        memset(nrf_data.dtq_uid,    0x00, 4);
+        memset(transmit_config.dist,0x00, 4);
+        //send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
+        //send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
+        //set_send_data_status( SEND_500MS_DATA_STATUS );
+    }
+    b_print("{\r\n");
+    b_print("  \"fun\": \"answer_stop\",\r\n");
+    b_print("  \"result\": \"0\"\r\n");
+    b_print("}\r\n");
+}
+
 /**************************************END OF FILE****************************/

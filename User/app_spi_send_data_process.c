@@ -145,7 +145,7 @@ void spi_timer_init( void )
 ******************************************************************************/
 void spi_write_data_to_buf( u8 *buf, u8 len, u8 cnt, u8 us, u8 ms )
 {
-	spi_pro_init_pack( &sbuf[sbuf_cnt_w], DEVICE_TX, 0x10 );
+	spi_pro_init_pack_rf( &sbuf[sbuf_cnt_w], RF_DATA_WITH_PRE, 0x02 );
 	sbuf[sbuf_cnt_w].length = len;
 	memcpy( sbuf[sbuf_cnt_w].data, buf, len );
 	spi_pro_pack_update_crc( &sbuf[sbuf_cnt_w] );
@@ -169,7 +169,7 @@ spi_cmd_t *spi_malloc_buf( void )
 
 int8_t spi_write_cmd_to_tx( u8 *buf, u8 len )
 {
-	spi_pro_init_pack( &sbuf[sbuf_cnt_w], DEVICE_TX, 0x20);
+	spi_pro_init_pack_set( &sbuf[sbuf_cnt_w], DEVICE_TX );
 	sbuf[sbuf_cnt_w].length = len;
 	memcpy( sbuf[sbuf_cnt_w].data, buf, len);
 	spi_pro_pack_update_crc( &sbuf[sbuf_cnt_w] );
@@ -180,7 +180,7 @@ int8_t spi_write_cmd_to_tx( u8 *buf, u8 len )
 
 int8_t spi_write_cmd_to_rx( u8 *buf, u8 len )
 {
-	spi_pro_init_pack( &sbuf[sbuf_cnt_w], DEVICE_RX, 0x20);
+	spi_pro_init_pack_set( &sbuf[sbuf_cnt_w], DEVICE_RX);
 	sbuf[sbuf_cnt_w].length = len;
 	memcpy( sbuf[sbuf_cnt_w].data, buf, len);
 	spi_pro_pack_update_crc( &sbuf[sbuf_cnt_w] );

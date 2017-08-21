@@ -9,8 +9,6 @@
 hand_att_cmd_t s_hand_att_cmd = RF_CMD_HAND_ATT_DEFAULT;
 rf_pack_t      rf_data;
 
-extern nrf_communication_t nrf_data;
-extern uint16_t list_tcb_table[UID_LIST_TABLE_SUM][WHITE_TABLE_LEN];
 static uint8_t  answer_quenum     = 1;
 static uint8_t  is_last_data_full = 0;
 
@@ -290,102 +288,72 @@ void serial_cmd_answer_start( char *json_str )
     q_info_t  q_tmp = { 0, 0, 0 };
 
     answer_cmd_t   *as_cmd = (answer_cmd_t *)rf_data.data;
-    spi_cmd_t *s_data = spi_malloc_buf();
 
-    if( s_data != NULL )
-    {
-        spi_pro_init_pack( s_data, DEVICE_TX,  0x10);
+		rf_pro_init_pack( &rf_data );
+		rf_pro_pack_num_add( &rf_data );
 
-        rf_pro_init_pack( &rf_data );
-        rf_pro_pack_num_add( &rf_data );
+		pack_init_answer( as_cmd );
+		answer_pack_quenum_add( as_cmd );
 
-        pack_init_answer( as_cmd );
-        answer_pack_quenum_add( as_cmd );
+		do
+		{
+				uint8_t item_t = 0;
+				char item_str[25],key_str[20];
+				memset( item_str, 0x00, 25 );
+				memset( key_str,  0x00, 20 );
+				p_end  = parse_json_item( p_next, key_str, item_str );
+				p_next = p_end;
 
-        do
-        {
-            uint8_t item_t = 0;
-            char item_str[25],key_str[20];
-            memset( item_str, 0x00, 25 );
-            memset( key_str,  0x00, 20 );
-            p_end  = parse_json_item( p_next, key_str, item_str );
-            p_next = p_end;
+				for( item_t = 0; item_t < ANSWER_ITEM_NUM; item_t++ )
+				{
+						if( strncmp( key_str, answer_list[item_t].key,
+										answer_list[item_t].str_len ) == 0 )
+						{
+								if( answer_list[item_t].j_fun != NULL )
+								switch( item_t )
+								{
+										case AS_TIME:
+												json_decode_time( NULL, item_str );
+										break;
+										case AS_QUESTION_T:
+												answer_list[item_t].j_fun( (uint8_t *)(&q_tmp), item_str );
+										break;
+										case AS_QUESTION_I:
+												json_decode_answer_id( (uint8_t *)(&q_tmp), item_str );
+										break;
+										case AS_QUESTION_R:
+										{
+												json_decode_answer_range( (uint8_t *)(&q_tmp), item_str );
+												dtq_encode_answer( &q_tmp, as_cmd->buf, &(as_cmd->len));
+												q_num++;
+										}
+										break;
+										case AS_HAND:
+												json_decode_hand( (uint8_t *)&s_hand_att_cmd, item_str );
+												break;
+										case AS_SIGN:
+												json_decode_att( (uint8_t *)&s_hand_att_cmd, item_str );
+												break;
+										default: break;
+								}
+								break;
+						}
+				}
 
-            for( item_t = 0; item_t < ANSWER_ITEM_NUM; item_t++ )
-            {
-                if( strncmp( key_str, answer_list[item_t].key,
-                        answer_list[item_t].str_len ) == 0 )
-                {
-                    if( answer_list[item_t].j_fun != NULL )
-                    switch( item_t )
-                    {
-                        case AS_TIME:
-                            json_decode_time( NULL, item_str );
-                        break;
-                        case AS_QUESTION_T:
-                            answer_list[item_t].j_fun( (uint8_t *)(&q_tmp), item_str );
-                        break;
-                        case AS_QUESTION_I:
-                            json_decode_answer_id( (uint8_t *)(&q_tmp), item_str );
-                        break;
-                        case AS_QUESTION_R:
-                        {
-                            json_decode_answer_range( (uint8_t *)(&q_tmp), item_str );
-                            dtq_encode_answer( &q_tmp, as_cmd->buf, &(as_cmd->len));
-                            q_num++;
-                        }
-                        break;
-                        case AS_HAND:
-                            json_decode_hand( (uint8_t *)&s_hand_att_cmd, item_str );
-                            break;
-                        case AS_SIGN:
-                            json_decode_att( (uint8_t *)&s_hand_att_cmd, item_str );
-                            break;
-                        default: break;
-                    }
-                    break;
-                }
-            }
+				if( q_num > 80 )
+				{
+						err = -2;
+						break;
+				}
+		}while( ( p_end - json_str ) < str_len-3 );
 
-            if( q_num > 80 )
-            {
-                err = -2;
-                break;
-            }
-        }while( ( p_end - json_str ) < str_len-3 );
-
-        rf_data.pack_len = as_cmd->len + 3;
-        rf_pack_add_data( &rf_data, (uint8_t *)&s_hand_att_cmd, sizeof(hand_att_cmd_t));
-        rf_data_to_spi_data( s_data, &rf_data );
-    }
-    else
-        err = -1;
+		rf_data.pack_len = as_cmd->len + 3;
+		if(s_hand_att_cmd.hand_att.byte != 0)
+			rf_pack_add_data( &rf_data, (uint8_t *)&s_hand_att_cmd, sizeof(hand_att_cmd_t));
+		err =	rf_send_data_start();
 
     b_print("{\r\n");
     b_print("  \"fun\": \"answer_start\",\r\n");
     b_print("  \"result\": \"%d\"\r\n",err);
-    b_print("}\r\n");
-}
-
-void serial_cmd_answer_stop(const cJSON *object)
-{
-    uint8_t sdata_index;
-    uint8_t *pSdata;
-    pSdata = (uint8_t *)rf_var.tx_buf+1;
-    *(pSdata+(sdata_index++)) = 0x01;
-    rf_var.cmd = 0x11;
-    rf_var.tx_len = sdata_index+2 ;
-    {
-        nrf_transmit_parameter_t transmit_config;
-        memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
-        memset(nrf_data.dtq_uid,    0x00, 4);
-        memset(transmit_config.dist,0x00, 4);
-        //send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
-        //send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
-        set_send_data_status( SEND_500MS_DATA_STATUS );
-    }
-    b_print("{\r\n");
-    b_print("  \"fun\": \"answer_stop\",\r\n");
-    b_print("  \"result\": \"0\"\r\n");
     b_print("}\r\n");
 }
