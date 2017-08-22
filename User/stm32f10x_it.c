@@ -22,7 +22,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "app_rf_send_data_process.h"
 #include "app_serial_cmd_process.h"
 #include "app_spi_send_data_process.h"
 #include <stdio.h>  
@@ -77,7 +76,6 @@ int8_t irq_buf_read( uint8_t *temp_rbuf )
 }
 
 /* uart global variables */
-extern nrf_communication_t	nrf_data;
 extern revicer_typedef   revicer;
 /******************************************************************************
   Function:uart_json_decode

@@ -12,7 +12,7 @@
 
 #include "main.h"
 
-//#define ENABLE_ANSWER_ENCODE_DEBUG  
+#define ENABLE_ANSWER_ENCODE_DEBUG  
 
 #define AS_FUN                  0
 #define AS_TIME                 1
@@ -65,8 +65,7 @@ typedef struct
 {
 	uint8_t cmd;
 	uint8_t len;
-	que_num_t que_num;
-	uint8_t   buf[250];
+	uint8_t buf[250];
 }answer_cmd_t;
 
 typedef struct

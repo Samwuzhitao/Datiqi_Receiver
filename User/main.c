@@ -13,8 +13,6 @@
 #include "stdlib.h"
 #include "board.h"
 #include "app_serial_cmd_process.h"
-#include "app_rf_send_data_process.h"
-#include "app_show_message_process.h"
 #include "app_card_process.h"
 #include "app_spi_send_data_process.h"
 

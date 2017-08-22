@@ -10,7 +10,7 @@
 #include "main.h"
 /* Private variables ---------------------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
-spi_cmd_ctl_t     s_cmd_ctl = { 0, 0 };
+spi_cmd_ctl_t     s_cmd_ctl = { 0, DEVICE_TX };
 
 static uint8_t hal_nrf_rw(SPI_TypeDef* SPIx, uint8_t value)
 {
@@ -78,7 +78,7 @@ void spi_pro_init_pack_rf( spi_cmd_t *spi_scmd, uint8_t data_t, uint8_t tx_ch )
 
 void spi_pro_pack_update_crc( spi_cmd_t *spi_scmd )
 {
-	spi_scmd->xor = XOR_Cal( (uint8_t *)&(spi_scmd->dev_t),
+	spi_scmd->xor = crc_xor( (uint8_t *)&(spi_scmd->dev_t),
 		spi_scmd->length + 3 );
 }
 
@@ -184,11 +184,14 @@ uint8_t bsp_spi_rx_data( uint32_t irq, spi_cmd_t *spi_rcmd )
 				
 			case 1:
 				{
-					spi_rcmd->dev_t = pfun();
-					if(spi_rcmd->dev_t > 2)
+					uint8_t tmp = pfun();
+					if(tmp > 2)
 						return 1;
 					else
+					{
+						spi_rcmd->dev_t = (spi_dev_t)tmp;
 						rx_s = 2;
+					}
 				}
 				break;
 		
@@ -219,7 +222,7 @@ uint8_t bsp_spi_rx_data( uint32_t irq, spi_cmd_t *spi_rcmd )
 			case 5:
 				{
 					spi_rcmd->xor = pfun();
-					if( spi_rcmd->xor != XOR_Cal((uint8_t *)&spi_rcmd->dev_t,spi_rcmd->length + 3))
+					if( spi_rcmd->xor != crc_xor((uint8_t *)&spi_rcmd->dev_t,spi_rcmd->length + 3))
 						return 1;
 					else
 						rx_s = 6;

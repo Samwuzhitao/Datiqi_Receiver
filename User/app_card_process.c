@@ -12,7 +12,7 @@
 #include "main.h"
 #include "app_serial_cmd_process.h"
 #include "app_card_process.h"
-#include "app_show_message_process.h"
+#include "b_print.h"
 
 //#define SHOW_CARD_PROCESS_TIME
 extern uint8_t g_cSNR[10];	
@@ -205,7 +205,7 @@ void App_card_process(void)
 			}
 			else
 			{
-				if(rID.data_xor != XOR_Cal(rID.uid,card_data_len-3))
+				if(rID.data_xor != crc_xor(rID.uid,card_data_len-3))
 				{
 					uint8_t i;
 					DEBUG_CARD_DATA_LOG("NDEF_DataRead :");
@@ -290,7 +290,7 @@ void App_card_process(void)
 					{
 						memcpy(wID.stdid,card_task.stdid,10);
 					}
-					wID.data_xor = XOR_Cal(wID.uid,card_data_len-3);
+					wID.data_xor = crc_xor(wID.uid,card_data_len-3);
 
 					/* 完全比较，否则存在异或校验的巧合*/
 				  for(i=0;i<card_data_len;i++)
@@ -356,7 +356,7 @@ void App_card_process(void)
 					DEBUG_CARD_DATA_LOG("NDEF_DataRead :");
 					for(i=0;i<card_data_len;i++)
 						DEBUG_CARD_DATA_LOG("%02x ",rpdata[i]);
-					if(rID.data_xor == XOR_Cal(rID.uid,card_data_len-3))
+					if(rID.data_xor == crc_xor(rID.uid,card_data_len-3))
 							DEBUG_CARD_DATA_LOG(" XOR OK!");
 					DEBUG_CARD_DATA_LOG("\r\n");
 					
@@ -403,7 +403,7 @@ void App_card_process(void)
 			}
 			else
 			{
-				if(rID.data_xor != XOR_Cal(rID.uid,card_data_len-3))
+				if(rID.data_xor != crc_xor(rID.uid,card_data_len-3))
 				{
 					memset(rpdata,0x00,card_data_len);
 					mfrc500_init();

@@ -16,7 +16,7 @@
 #include "define.h"
 #include "whitelist.h"
 #include "nrf.h"
-#include "app_timer.h"
+#include "sw_timer.h"
 
 /* board name defines --------------------------------------------------------*/
 /* NVIC defines ---------------------------------------------------------------*/
@@ -120,7 +120,6 @@ typedef struct
 	uint8_t end;
 }cpu_spi_cmd_typedef;
 
-
 typedef struct
 {
 	uint8_t	 len;
@@ -133,7 +132,6 @@ extern uint8_t dtq_self_inspection_flg;
 void systick_timer_init( void );
 
 /* platform misc functions's declaritions */
-uint8_t XOR_Cal(uint8_t *data, uint16_t length);
 void board_init(void);
 void bsp_uart_init(void);
 

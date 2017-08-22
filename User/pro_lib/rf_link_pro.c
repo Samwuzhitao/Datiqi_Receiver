@@ -72,12 +72,12 @@ void rf_pro_init_pack( rf_pack_t *rf_pack )
 void rf_pro_pack_update_crc( rf_pack_t *rf_pack )
 {
 	uint8_t array_crc[5];
-	array_crc[0] = XOR_Cal((uint8_t *)&(rf_pack->ctl), sizeof(rf_pack_ctl_t));
-	array_crc[1] = XOR_Cal( rf_pack->data, rf_pack->pack_len );
-	array_crc[2] = XOR_Cal( rf_pack->rev_data, rf_pack->rev_len );
+	array_crc[0] = crc_xor((uint8_t *)&(rf_pack->ctl), sizeof(rf_pack_ctl_t));
+	array_crc[1] = crc_xor( rf_pack->data, rf_pack->pack_len );
+	array_crc[2] = crc_xor( rf_pack->rev_data, rf_pack->rev_len );
 	array_crc[3] = rf_pack->rev_len;
 	array_crc[4] = rf_pack->pack_len;
-	rf_pack->crc_xor = XOR_Cal( array_crc, 5);
+	rf_pack->crc_xor = crc_xor( array_crc, 5);
 }
 
 void rf_pack_add_data( rf_pack_t *pack_a, uint8_t *buf, uint8_t len )
@@ -133,7 +133,7 @@ void r_send_1_cb( void )
 ******************************************************************************/
 void send_data_process_timer_init( void )
 {
-  sw_create_timer(&retransmit_500ms_timer , 300, 2, 3, &(send_cmd_s), r_send_1_cb );
-  sw_create_timer(&retransmit_2s_timer    ,1000, 5, 6, &(send_cmd_s), r_send_2_cb );
+  sw_create_timer(&spi_300ms_timer , 300, 2, 3, &(send_cmd_s), r_send_1_cb );
+  sw_create_timer(&spi_1s_timer    ,1000, 5, 6, &(send_cmd_s), r_send_2_cb );
 }
 

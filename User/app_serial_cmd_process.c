@@ -18,10 +18,9 @@
 #include <stdio.h>
 #include "main.h"
 #include "cJSON.h"
-#include "app_rf_send_data_process.h"
 #include "app_spi_send_data_process.h"
 #include "app_card_process.h"
-#include "app_show_message_process.h"
+#include "b_print.h"
 #include "json_decode.h"
 #include "answer_fun.h"
 #include "bind_fun.h"
@@ -29,7 +28,6 @@
 typedef  void (*pFunction)(void);
 
 /* Private variables ---------------------------------------------------------*/
-extern nrf_communication_t nrf_data;
 extern uint16_t list_tcb_table[UID_LIST_TABLE_SUM][WHITE_TABLE_LEN];
 
 /* 暂存题目信息，以备重发使用 */
@@ -179,7 +177,7 @@ static void uart_update_answers(void)
 	static uint8_t  Cmdtype;
 	static uint16_t uidpos = 0xFFFF,DataLen;
 	static uint16_t r_index = 0;
-	static uint8_t  is_last_data_full = 0;
+	static uint8_t  r_is_last_data_full = 0;
 
 	if( uart_send_s == 0 )
 	{
@@ -271,7 +269,7 @@ static void uart_update_answers(void)
 		
 		if( r_index < DataLen-3 )
 		{
-			if(is_last_data_full == 0)
+			if(r_is_last_data_full == 0)
 			{
 				q_tmp.type  = prdata[r_index] & 0x0F;
 				q_tmp.id    = ((prdata[r_index]   & 0xF0) >> 4)| 
@@ -279,7 +277,7 @@ static void uart_update_answers(void)
 				q_tmp.range = ((prdata[r_index+1] & 0xF0) >> 4)| 
 											((prdata[r_index+2] & 0x0F) << 4);
 				r_index = r_index + 2;
-				is_last_data_full = 1;
+				r_is_last_data_full = 1;
 			}
 			else
 			{
@@ -287,7 +285,7 @@ static void uart_update_answers(void)
 				q_tmp.id    = prdata[r_index+1];
 				q_tmp.range = prdata[r_index+2];
 				r_index = r_index + 3;
-				is_last_data_full = 0;
+				r_is_last_data_full = 0;
 			}
 			memset( q_r_str, 0x00, 7 );
 			memset( q_t_str, 0x00, 2 );
@@ -306,7 +304,7 @@ static void uart_update_answers(void)
 				b_print("}\r\n");
 				uart_send_s = 4;
 				r_index     = 0;
-				is_last_data_full = 0;
+				r_is_last_data_full = 0;
 			}
 			return;
 		}
@@ -421,14 +419,14 @@ void serial_cmd_one_key_off(const cJSON *object)
 
 	/* 发送数据 */
 	{
-		nrf_transmit_parameter_t transmit_config;
+//		nrf_transmit_parameter_t transmit_config;
 
 		/* 准备发送数据管理块 */
-		memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
+//		memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
 		
-		memset(nrf_data.dtq_uid,    0x00, 4);
-		memcpy(nrf_data.jsq_uid,    revicer.uid, 4);
-		memset(transmit_config.dist,0x00, 4);
+//		memset(nrf_data.dtq_uid,    0x00, 4);
+//		memcpy(nrf_data.jsq_uid,    revicer.uid, 4);
+//		memset(transmit_config.dist,0x00, 4);
 		//send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
 		//send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
 
@@ -568,7 +566,7 @@ void serial_cmd_raise_hand_sign_in_set(const cJSON *object)
 	uint8_t raise_hand,sign_in;
 	char    *p_sign_in_data;
 	char    *p_raise_hand_data;
-	nrf_transmit_parameter_t transmit_config;
+//	nrf_transmit_parameter_t transmit_config;
 	char *p_cmd_str = cJSON_GetObjectItem(object, "fun")->valuestring;
 
 	b_print("{\r\n");
@@ -609,10 +607,10 @@ void serial_cmd_raise_hand_sign_in_set(const cJSON *object)
 		rf_var.cmd = 0x10;
 	}
 	/* 准备发送数据管理块 */
-	memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
-	memset(nrf_data.dtq_uid,    0x00, 4);
-	memcpy(nrf_data.jsq_uid,    revicer.uid, 4);
-	memset(transmit_config.dist,0x00, 4);
+///	memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
+//	memset(nrf_data.dtq_uid,    0x00, 4);
+//	memcpy(nrf_data.jsq_uid,    revicer.uid, 4);
+//	memset(transmit_config.dist,0x00, 4);
 	//send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
 	//send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
 
@@ -783,14 +781,14 @@ void serial_cmd_self_inspection(const cJSON *object)
 
 	/* 发送数据 */
 	{
-		nrf_transmit_parameter_t transmit_config;
+//		nrf_transmit_parameter_t transmit_config;
 
 		/* 准备发送数据管理块 */
-		memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
+//		memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
 
-		memset(nrf_data.dtq_uid,    0x00, 4);
-		memset(nrf_data.jsq_uid,    0x00, 4);
-		memset(transmit_config.dist,0x00, 4);
+//		memset(nrf_data.dtq_uid,    0x00, 4);
+//		memset(nrf_data.jsq_uid,    0x00, 4);
+//		memset(transmit_config.dist,0x00, 4);
 		//send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
 		//send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
 
@@ -822,10 +820,10 @@ void serial_cmd_answer_stop(const cJSON *object)
     rf_var.cmd = 0x11;
     rf_var.tx_len = sdata_index+2 ;
     {
-        nrf_transmit_parameter_t transmit_config;
-        memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
-        memset(nrf_data.dtq_uid,    0x00, 4);
-        memset(transmit_config.dist,0x00, 4);
+//        nrf_transmit_parameter_t transmit_config;
+//        memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
+//        memset(nrf_data.dtq_uid,    0x00, 4);
+//        memset(transmit_config.dist,0x00, 4);
         //send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
         //send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
         //set_send_data_status( SEND_500MS_DATA_STATUS );

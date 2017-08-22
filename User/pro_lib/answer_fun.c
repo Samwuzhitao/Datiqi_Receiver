@@ -3,14 +3,13 @@
 #include "json_decode.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "app_rf_send_data_process.h"
 #include "app_spi_send_data_process.h"
 
 hand_att_cmd_t s_hand_att_cmd = RF_CMD_HAND_ATT_DEFAULT;
 rf_pack_t      rf_data;
 
 static uint8_t  answer_quenum     = 1;
-static uint8_t  is_last_data_full = 0;
+static uint8_t  s_is_last_data_full = 0;
 
 static void json_decode_time        ( uint8_t *pdada, char *v_str );
 static void json_decode_answer_type ( uint8_t *pdada, char *v_str );
@@ -58,14 +57,15 @@ static void json_decode_att( uint8_t *pdada, char *v_str )
 
 void pack_init_answer( answer_cmd_t *cmd )
 {
-    is_last_data_full = 0;
+    s_is_last_data_full = 0;
     cmd->cmd  = 0x10;
-    cmd->len  = 0;
+    cmd->len  = 1;
+		cmd->buf[0] = answer_quenum;
 }
 
 void answer_pack_quenum_add( answer_cmd_t *cmd )
 {
-    cmd->que_num.bits.num = answer_quenum ;
+    cmd->buf[0] = answer_quenum ;
     answer_quenum = (answer_quenum + 1) % 16;
     if(answer_quenum == 0)
         answer_quenum = 1;
@@ -232,14 +232,14 @@ void dtq_encode_answer( q_info_t *q_tmp, uint8_t *sbuf, uint8_t *sbuf_len )
 {
     uint8_t s_cnt = *sbuf_len;
 
-    if(is_last_data_full == 0)
+    if(s_is_last_data_full == 0)
     {
         *(sbuf+(s_cnt++)) = ((q_tmp->type) & 0x0F ) |
                             ((q_tmp->id & 0x0F) << 4);
         *(sbuf+(s_cnt++)) = ((q_tmp->id & 0xF0)>>4) |
                             ((q_tmp->range & 0x0F) << 4);
         *(sbuf+(s_cnt))   = (q_tmp->range & 0xF0)>>4;
-        is_last_data_full = 1;
+        s_is_last_data_full = 1;
     }
     else
     {
@@ -247,21 +247,23 @@ void dtq_encode_answer( q_info_t *q_tmp, uint8_t *sbuf, uint8_t *sbuf_len )
         s_cnt++;
         *(sbuf+(s_cnt++)) = q_tmp->id ;
         *(sbuf+(s_cnt++)) = q_tmp->range ;
-        is_last_data_full = 0;
+        s_is_last_data_full = 0;
     }
 #ifdef ENABLE_ANSWER_ENCODE_DEBUG
     {
         uint8_t i;
+			  //b_print("s_len = %d \r\n",*sbuf_len);
         b_print("ANSWER_ENCMDE:");
         b_print("  ");
-        for( i=0; i<*sbuf_len+19; i++ )
+        for( i=0; i<*sbuf_len+21; i++ )
             b_print("   ");
-        for( i=0; i<s_cnt-*sbuf_len; i++ )
+        for( i=0; i<s_cnt-*sbuf_len+s_is_last_data_full; i++ )
             b_print(" %02x", *(sbuf+*sbuf_len+i));
         b_print("\r\n");
     }
 #endif
     *sbuf_len = s_cnt;
+		//b_print("e_len = %d \r\n",*sbuf_len);
 }
 
 void dtq_decode_answer( q_info_t * q_tmp, char *q_r, char * q_t )
@@ -346,8 +348,8 @@ void serial_cmd_answer_start( char *json_str )
 						break;
 				}
 		}while( ( p_end - json_str ) < str_len-3 );
-
-		rf_data.pack_len = as_cmd->len + 3;
+		as_cmd->len = as_cmd->len + s_is_last_data_full;
+		rf_data.pack_len = as_cmd->len + 2;
 		if(s_hand_att_cmd.hand_att.byte != 0)
 			rf_pack_add_data( &rf_data, (uint8_t *)&s_hand_att_cmd, sizeof(hand_att_cmd_t));
 		err =	rf_send_data_start();

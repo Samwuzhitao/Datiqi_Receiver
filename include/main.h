@@ -23,16 +23,17 @@
 #include "stm32f10x_it.h"
 #include "mfrc500.h"
 #include "m24sr_cmd.h"
-#include "app_timer.h"
+#include "sw_timer.h"
 #include "eeprom.h"
 #include "gpio.h"
 
 #include "nrf.h"
-#include "ringbuffer.h"
+#include "ring_buf.h"
+#include "b_print.h"
+#include "sw_crc.h"
 
-#include "app_show_message_process.h"
-#include "rf_link_protocol.h"
-#include "spi_link_protocol.h"
+#include "rf_link_pro.h"
+#include "spi_link_pro.h"
 
 #endif //_MAIN_H_
 /**

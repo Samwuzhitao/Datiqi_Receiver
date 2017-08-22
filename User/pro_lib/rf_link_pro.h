@@ -82,5 +82,5 @@ void rf_pack_add_data( rf_pack_t *pack_a, uint8_t *buf, uint8_t len );
 
 int8_t rf_send_data_start( void );
 void   rf_s_cmd_process( void );
-
+void   send_data_process_timer_init( void );
 #endif

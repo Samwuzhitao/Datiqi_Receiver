@@ -11,14 +11,11 @@
 #include "stm32f10x.h"
 #include "board.h"
 #include "nrf.h"
-#include "app_timer.h"
-#include "app_rf_send_data_process.h"
+#include "sw_timer.h"
 #include "app_spi_send_data_process.h"
 #include "app_card_process.h"
 
 /* Private variables ---------------------------------------------------------*/
-spi_cmd_type_t 			    spi_cmd_type;
-nrf_communication_t	    nrf_data;
 bool 						        gbf_hse_setup_fail = FALSE;		// ????????
 RF_TypeDef 				      rf_var;
 extern wl_typedef       wl;
@@ -134,21 +131,7 @@ int fgetc(FILE *f)
 	return (USART_ReceiveData(USART1pos));
 }
 
-/*******************************************************************************
-* Function Name   : uint8_t XOR_Cal(uint8_t *data, uint16_t length)
-* Description     : 异或计算函数
-* Input           : data	: 数据指针
-*        		    length	：数据长度
-* Output          : None
-*******************************************************************************/
-uint8_t XOR_Cal(uint8_t *data, uint16_t length)
-{
-	uint8_t  crc = *data;
-	uint16_t i;
-	for( i = 1; i < length; i++ )
-		crc = crc ^ *(data+i);
-	return crc;
-}
+
 
 /****************************************************************************
 * ?    ?:void bsp_uart_init(void)

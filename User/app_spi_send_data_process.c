@@ -1,14 +1,13 @@
 #include "main.h"
 #include "app_spi_send_data_process.h"
-#include "app_rf_send_data_process.h"
 
 static uint8_t    sbuf_s = 0;
 static spi_cmd_t  sbuf[SPI_SEND_DATA_BUFFER_COUNT_MAX];
 static uint16_t   sbuf_cnt_w, sbuf_cnt_r, sbuf_cnt;
 static uint8_t    retry_cnt = 0;
-spi_cmd_t  irq_rbuf[SPI_SEND_DATA_BUFFER_COUNT_MAX];
-uint16_t   irq_rbuf_cnt_w = 0, irq_rbuf_cnt_r = 0, irq_rbuf_cnt = 0;
-spi_cmd_ctl_t     r_cmd_ctl = { 0 ,0 };
+spi_cmd_t         irq_rbuf[SPI_SEND_DATA_BUFFER_COUNT_MAX];
+uint16_t          irq_rbuf_cnt_w = 0, irq_rbuf_cnt_r = 0, irq_rbuf_cnt = 0;
+spi_cmd_ctl_t     r_cmd_ctl = { 0, DEVICE_TX };
 /******************************************************************************
   Function:set_spi_status
   Description:

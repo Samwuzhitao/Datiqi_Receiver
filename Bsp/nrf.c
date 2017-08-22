@@ -10,7 +10,6 @@
 
 #include "main.h"
 #include "nrf.h"
-#include "app_rf_send_data_process.h"
 #include "app_spi_send_data_process.h"
 
 #ifdef NRF_DEBUG
@@ -19,7 +18,6 @@
 #define nrf_debug(...)
 #endif
 
-extern nrf_communication_t nrf_data;
 extern uint16_t            list_tcb_table[UID_LIST_TABLE_SUM][WHITE_TABLE_LEN];
 extern wl_typedef          wl;
 extern revicer_typedef     revicer;
@@ -439,116 +437,6 @@ void TIM3_Int_Init(u16 arr,u16 psc)
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = TIM3_SUB_PRIORITY;  //从优先级3级
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE; //IRQ通道被使能
 	NVIC_Init(&NVIC_InitStructure);  //初始化NVIC寄存器
-
-}
-
-/******************************************************************************
-  Function:nrf_transmit_start
-  Description:
-  Input:	data_buff：	   要发送的数组
-			data_buff_len：要发送的数组长度
-			nrf_data_type：发送数据类型，有效数据:NRF_DATA_IS_USEFUL
-										ACK		:NRF_DATA_IS_ACK
-  Output:
-  Return:
-  Others:注意：通信方式限制，若向同一UID答题器下发数据，时间要间隔3S以上
-******************************************************************************/
-void nrf_transmit_start( nrf_transmit_parameter_t *t_conf)
-{
-	/* data header */
-	uint8_t i = 0;
-	uint8_t send_delay = 0;
-	static uint8_t logic_pac = 0;
-
-	if(t_conf->is_pac_add == 1)
-	{
-		revicer.sen_num++;
-		if( t_conf->logic_pac_add == 1 )
-		{
-			logic_pac = (logic_pac + 1) % 0x0F;
-			if(logic_pac == 0)
-				logic_pac = 1;
-		}
-	}
-
-	memset(nrf_data.tbuf,0,NRF_TOTAL_DATA_LEN);
-	nrf_data.tbuf[i++]  = 0x61;
-	memcpy((nrf_data.tbuf + i), t_conf->dist, 4);
-	i = i + 4;
-	memcpy((nrf_data.tbuf + i), nrf_data.jsq_uid, 4);
-	i = i + 4;
-	nrf_data.tbuf[i++] = 0x00; // device id
-	nrf_data.tbuf[i++] = 0x00; // protocol version
-	nrf_data.tbuf[i++] = revicer.sen_seq++;
-	nrf_data.tbuf[i++] = revicer.sen_num;
-	nrf_data.tbuf[i++] = t_conf->package_type;
-
-	if((t_conf->package_type == NRF_DATA_IS_PRE) || 
-		 (t_conf->package_type == NRF_DATA_IS_USEFUL))
-	{
-		nrf_data.tbuf[i++] = 0x0F; // ACK_TABLE_LEN
-		memcpy(nrf_data.tbuf + i, list_tcb_table[t_conf->sel_table], 0x0F);
-		i = i + 0x0F;
-		if(t_conf->package_type == NRF_DATA_IS_USEFUL)
-			nrf_data.tbuf[i++] = rf_var.cmd;
-		else
-			nrf_data.tbuf[i++] = 0xFF;
-		send_delay = 1;
-	}
-	else
-	{
-		nrf_data.tbuf[i++] = 0x00; // ACK_TABLE_LEN
-		nrf_data.tbuf[i++] = 0xFF;
-		send_delay = 10;
-	}
-	
-#ifdef OPEN_ACK_TABLE_SHOW
-	{
-		uint8_t i = 0, printf_flg = 0;
-		uint8_t *pdata = (uint8_t *)list_tcb_table[t_conf->sel_table];
-		printf("Seq:%2x Pac:%2x LogicPac:%2x ",revicer.sen_seq,revicer.sen_num,logic_pac);
-		printf("DATA_TYPE:%d ",t_conf->package_type);
-		switch(t_conf->package_type)
-		{
-			case 0: printf("DATA TABLE"); printf_flg = 1; break;
-			case 2: printf("PRE  TABLE"); printf_flg = 1; break;
-			default: break;
-		}
-		if(printf_flg == 1)
-		{
-			printf("[%2d]:",t_conf->sel_table);
-			
-			for(i=0;i<15;i++)
-			{
-				printf("%02x ",pdata[i]);
-			}
-			printf("\r\n");
-		}
-	}
-#endif
-
-	if(t_conf->package_type == NRF_DATA_IS_USEFUL)
-	{
-		t_conf->data_buf[0] = (logic_pac<<4) | (t_conf->data_buf[0] & 0x0F);
-		nrf_data.tbuf[i++] = t_conf->data_len;
-		memcpy(nrf_data.tbuf+i,t_conf->data_buf,t_conf->data_len);
-		i = i + t_conf->data_len;
-	}
-	else
-	{
-		nrf_data.tbuf[i++] = 0x00;
-	}
-
-	/* xor data */
-	nrf_data.tbuf[i] = XOR_Cal(nrf_data.tbuf+1,i-1);
-	i++;
-	nrf_data.tbuf[i++] = 0x21;
-
-	nrf_data.tlen = i;
-
-	/* 开始通讯之前先发2次，之后开启定时判断重发机制 */
-	spi_write_data_to_buf( nrf_data.tbuf, nrf_data.tlen,
-												t_conf->transmit_count, t_conf->delay100us, send_delay);
 }
 
 /**************************************END OF FILE****************************/

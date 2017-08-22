@@ -3,7 +3,6 @@
 #include "json_decode.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "app_rf_send_data_process.h"
 #include "app_spi_send_data_process.h"
 #include "app_card_process.h"
 

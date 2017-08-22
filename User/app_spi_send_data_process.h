@@ -2,7 +2,6 @@
 #define __APP_SPI_SEND_DATA_PROCESS_H_
 
 #include "main.h"
-#include "app_show_message_process.h"
 
 //#define ENABLE_SPI_DEBUG_LOG
 
