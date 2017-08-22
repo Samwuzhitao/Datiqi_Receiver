@@ -89,7 +89,11 @@ void rf_data_to_spi_data( spi_cmd_t *spi_data, rf_pack_t *rf_pack )
 	rf_pro_pack_update_crc( rf_pack );
 
 	SPI_RF_DEBUG("\r\n[RF]s :");
+	#ifdef ENABLE_SPI_DECODE_DEBUG
 	SPI_RF_DEBUG(" %20x", rf_pack->head);
+	#else
+	SPI_RF_DEBUG(" %5x", rf_pack->head);
+	#endif
 	*(pdata++) = rf_pack->head;
 	SPI_DECODE_DEBUG("\r\nSEC_UID:\t");
 	SPI_RF_DEBUG(" %02x %02x %02x %02x", rf_pack->ctl.src_uid[0],
@@ -322,3 +326,21 @@ uint8_t spi_cmd_ack_check( spi_cmd_ctl_t *r_cmd_ctl )
 		return 0;
 }
 
+uint8_t bsp_spi_rx_ack( void )
+{
+	uint16_t i = 0;
+	uint8_t t_buf_ack[7] = { 0x86, 0x01, 0x22, 0x01, 0x01, 0x23, 0x76};
+	typedef  void (*spi_get_char)(uint8_t data);
+	spi_get_char pfun;
+
+	SPI_DATA_DEBUG("[RX]s :");
+	pfun = spi_rx_put_char;
+	NRF_RX_CSN_LOW();
+	for( i=0; i<7; i++ )
+	{
+		pfun( t_buf_ack[i] );
+	}
+	NRF_RX_CSN_HIGH();
+	SPI_DATA_DEBUG("\r\n");
+	return 0;
+}

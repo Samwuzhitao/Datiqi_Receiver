@@ -74,6 +74,12 @@ typedef struct
 	uint8_t         end;
 }rf_pack_t;
 
+typedef struct
+{
+	uint8_t         rssi;
+  rf_pack_t       rf_pack;
+}rssi_rf_pack_t;
+
 void rf_pro_init_pack( rf_pack_t *rf_pack );
 void rf_pro_pack_update_crc( rf_pack_t *rf_pack );
 void rf_pro_pack_debug( rf_pack_t *rf_pack );

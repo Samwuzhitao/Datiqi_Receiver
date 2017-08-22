@@ -1,5 +1,7 @@
 #include "main.h"
 #include "app_spi_send_data_process.h"
+#include "answer_fun.h"
+#include "ring_buf.h"
 
 static uint8_t    sbuf_s = 0;
 static spi_cmd_t  sbuf[SPI_SEND_DATA_BUFFER_COUNT_MAX];
@@ -23,19 +25,6 @@ void set_spi_status( uint8_t new_status )
 }
 
 /******************************************************************************
-  Function:get_spi_status
-  Description:
-  Input :
-  Output:
-  Return:
-  Others:None
-******************************************************************************/
-uint8_t get_spi_status( void )
-{
-	return sbuf_s ;
-}
-
-/******************************************************************************
   Function:spi_rx_data_process
   Description:
 		将零时缓存的数据存入到buffer中
@@ -50,23 +39,56 @@ void spi_rx_data_process( void )
 		if((irq_rbuf[irq_rbuf_cnt_r].cmd == 0x22) && 
 		(irq_rbuf[irq_rbuf_cnt_r].dev_t == DEVICE_RX))
 		{
+			static uint8_t pack_num = 0,seq_num = 0;
 			/* SPI 主动提交的数据 */
-			
+			/* 返回 SPI ACK */
+			bsp_spi_rx_ack();
+			{
+				uint8_t i;
+				rssi_rf_pack_t *rssi_pack = (rssi_rf_pack_t *)(irq_rbuf[irq_rbuf_cnt_r].data);
+				SPI_RF_DEBUG("[RF]r :");
+				for(i=0;i<irq_rbuf[irq_rbuf_cnt_r].length;i++)
+				{
+					SPI_RF_DEBUG(" %02x",irq_rbuf[irq_rbuf_cnt_r].data[i]);
+				}
+				SPI_RF_DEBUG("\r\n");
+				SPI_RF_DEBUG("[RF] DATA: seq_num:%02x pac_num:%02x \r\n",rssi_pack->rf_pack.ctl.seq_num,
+						rssi_pack->rf_pack.ctl.pac_num );
+			}
+			/* 将数据送入应用层处理 */
+			{
+				if( BUF_FULL != buffer_get_buffer_status(SPI_RBUF) )
+				{ 
+					/* 返回 RF ACK */
+					rf_pack_t      rf_ack;
+					rssi_rf_pack_t *rssi_pack = (rssi_rf_pack_t *)(irq_rbuf[irq_rbuf_cnt_r].data);
+					spi_cmd_t      *rf_ack_data = spi_malloc_buf();
+					answer_cmd_t   *ack_cmd = (answer_cmd_t *)rf_ack.data;
+					spi_pro_init_pack_rf( rf_ack_data, RF_ACK, 0x04 );
+					rf_pro_init_pack( &rf_ack );
+					ack_cmd->cmd    = 0x52;
+					ack_cmd->len    = 0x05;
+					ack_cmd->buf[0] = 0x01;
+					memcpy( ack_cmd->buf+1, rssi_pack->rf_pack.ctl.dst_uid, 4);
+					rf_ack.pack_len = ack_cmd->len + 2;
+					rf_data_to_spi_data( rf_ack_data, &rf_ack );
+					if(( pack_num != rssi_pack->rf_pack.ctl.pac_num ) &&
+						 ( seq_num  != rssi_pack->rf_pack.ctl.seq_num ))
+					{
+						pack_num = rssi_pack->rf_pack.ctl.pac_num;
+						seq_num  = rssi_pack->rf_pack.ctl.seq_num;
+						rf_write_data_to_buffer( SPI_RBUF, irq_rbuf[irq_rbuf_cnt_r].data,
+							irq_rbuf[irq_rbuf_cnt_r].length );
+					}
+				
+				}
+			}
 		}
 		else
 		{
 			/* SPI 被动应答 */
-//    uint8_t i;
 			r_cmd_ctl.cmd = irq_rbuf[irq_rbuf_cnt_r].cmd;
 			r_cmd_ctl.dev = irq_rbuf[irq_rbuf_cnt_r].dev_t;
-//		b_print("    rx_buf: ");
-//		b_print("%02x %02x %02x %02x",                                      \
-//			irq_rbuf[irq_rbuf_cnt_r].header, irq_rbuf[irq_rbuf_cnt_r].dev_t, \
-//			irq_rbuf[irq_rbuf_cnt_r].cmd, irq_rbuf[irq_rbuf_cnt_r].length);
-//		for( i = 0; i < irq_rbuf[irq_rbuf_cnt_r].length; i++ )
-//			b_print(" %02x", irq_rbuf[irq_rbuf_cnt_r].data[i]);
-//		b_print(" %02x %02x \r\n",
-//			irq_rbuf[irq_rbuf_cnt_r].xor, irq_rbuf[irq_rbuf_cnt_r].end);
 		}
 		irq_rbuf_cnt--;
 		irq_rbuf_cnt_r = (irq_rbuf_cnt_r + 1) % SPI_SEND_DATA_BUFFER_COUNT_MAX;
@@ -121,7 +143,7 @@ void spi_tx_data_process(void)
 	}
 }
 
-void App_spi_send_data_process( void )
+void spi_s_cmd_process( void )
 {
 	spi_tx_data_process();
 	spi_rx_data_process();

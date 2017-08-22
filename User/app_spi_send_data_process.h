@@ -17,14 +17,12 @@
 extern spi_cmd_t  irq_rbuf[SPI_SEND_DATA_BUFFER_COUNT_MAX];
 extern uint16_t   irq_rbuf_cnt_w, irq_rbuf_cnt_r, irq_rbuf_cnt;
 
-void change_spi_send_data_process_status( uint8_t new_status );
-uint8_t get_spi_send_data_process_status( void );
-void App_spi_send_data_process(void);
-void spi_write_data_to_buf( u8 *buf, u8 len, u8 cnt, u8 us, u8 ms );
-uint8_t get_spi_status( void );
-
 int8_t spi_write_cmd_to_rx( u8 *buf, u8 len );
 int8_t spi_write_cmd_to_tx( u8 *buf, u8 len );
-void spi_timer_init( void );
+
 spi_cmd_t *spi_malloc_buf( void );
+
+void spi_timer_init( void );
+void spi_s_cmd_process( void );
+
 #endif

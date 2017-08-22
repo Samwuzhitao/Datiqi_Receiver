@@ -66,6 +66,7 @@ void rf_pro_init_pack( rf_pack_t *rf_pack )
 	rf_pack->pack_len    = 0;
 	rf_pro_seq_num_add( rf_pack );
 	memcpy( rf_pack->ctl.src_uid, revicer.uid, 4 );
+	memset( rf_pack->ctl.dst_uid, 0x00, 4 );
 	rf_pro_set_version( rf_pack, VERSION_MAJOR, VERSION_MINOR);
 }
 

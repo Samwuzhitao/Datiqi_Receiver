@@ -31,8 +31,10 @@ int main(void)
 
 	while(1)
 	{	
-		/*rf send data process */
+		/* rf send data process */
 		rf_s_cmd_process();
+		/* spi send data process */
+		spi_s_cmd_process();
 
 		/* serial cmd processing process */
 		App_seirial_cmd_process();
@@ -41,6 +43,6 @@ int main(void)
 		App_card_process();
 
 		/*revicer spi send data process */
-		App_spi_send_data_process();
+
 	}	
 }

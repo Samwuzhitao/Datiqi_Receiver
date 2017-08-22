@@ -180,25 +180,12 @@ static void update_bottom( uint8_t sel, uint16_t Len )
   Return:
   Others:None
 ******************************************************************************/
-void spi_write_data_to_buffer( uint8_t sel, uint8_t SpiMessage[] )
+void rf_write_data_to_buffer( uint8_t sel, uint8_t *buf, uint8_t len )
 {
-	uint16_t AckTableLen,DataLen,Len, i;
-	uint8_t *pdata;
-
-	AckTableLen = SpiMessage[14];
-	DataLen     = SpiMessage[14+AckTableLen+2];
-	Len         = AckTableLen + DataLen + 18;
-	pdata       = SpiMessage;
-
-	//printf("writebuf:");
-	for(i=0;i<Len;i++)
-	{
-		set(sel,top[sel]+i,*pdata);
-		//printf(" %02x",*pdata);
-		pdata++;
-	}
-
-	update_top( sel, Len);
+	uint8_t i;
+	for(i=0;i<len;i++)
+		set(sel,top[sel]+i,*(buf+i));
+	update_top( sel, len);
 	update_write_status(sel);
 }
 
@@ -210,31 +197,132 @@ void spi_write_data_to_buffer( uint8_t sel, uint8_t SpiMessage[] )
   Return:
   Others:None
 ******************************************************************************/
-void spi_read_data_from_buffer( uint8_t sel, uint8_t SpiMessage[] )
+int8_t rf_read_data_from_buffer( uint8_t sel, rssi_rf_pack_t *pack )
 {
-	uint16_t i;
-	uint16_t AckTableLen = get( sel,bottom[sel] + 14);
-	uint16_t DataLen     = get( sel,bottom[sel] + 14 + AckTableLen + 2);
-	uint16_t Len         = AckTableLen + DataLen + 18;
-	uint8_t *pdata;
-
-	pdata = SpiMessage;
-	//printf("readbuf :");
-	for(i=0;i<Len;i++)
+	uint16_t r_index = 0;
+	uint8_t  r_buf_s = 0,*pdata;
+	int8_t err = -1,r_cnt = 0, i = 0;
+	do
 	{
-		*pdata = get(sel,bottom[sel]+i);
-		//printf(" %02x",*pdata);
-		pdata++;
-	}
-	//printf("\r\n");
-	
-	SpiMessage[14] = AckTableLen;
-	SpiMessage[14 + AckTableLen + 2] = DataLen;
+		if( err == 0)
+			break;
+		
+		switch( r_buf_s )
+		{
+			case 0: 
+			{
+				pack->rssi = get(sel,bottom[sel]+r_index);
+				r_index++; 
+				r_buf_s = 1;
+			}	
+			break;
+			case 1: 
+			{
+				pack->rf_pack.head = get(sel,bottom[sel]+r_index);
+				r_index++;
+				if( pack->rf_pack.head != 0x61 )
+					r_buf_s = 0;
+				else
+				{
+					i = 0;
+					r_buf_s = 2;
+					r_cnt   = sizeof(rf_pack_ctl_t);
+					pdata   = (uint8_t *)&(pack->rf_pack.ctl);
+				}
+			}
+			break;
+			case 2:
+			{
+				*(pdata+i) = get(sel,bottom[sel]+r_index);
+				r_index++;
+				i++;
+				if(i == r_cnt)
+					r_buf_s = 3;
+			}
+			break;
+			
+			case 3:
+			{
+				pack->rf_pack.rev_len = get(sel,bottom[sel]+r_index);
+				r_index++;
+				if( pack->rf_pack.rev_len != 0)
+				{
+					i = 0;
+					r_cnt   = pack->rf_pack.rev_len;
+					pdata   = pack->rf_pack.rev_data;
+					r_buf_s = 4;
+				}
+				else
+					r_buf_s = 5;
+			}
+			break;
+			case 4:
+			{
+				*(pdata+i) = get(sel,bottom[sel]+r_index);
+				r_index++;
+				i++;
+				if(i == r_cnt)
+					r_buf_s = 5;
+			}
+			break;
+			
+			case 5:
+			{
+				pack->rf_pack.pack_len = get(sel,bottom[sel]+r_index);
+				r_index++;
+				if( pack->rf_pack.pack_len != 0)
+				{
+					i = 0;
+					r_cnt   = pack->rf_pack.pack_len;
+					pdata   = pack->rf_pack.data;
+					r_buf_s = 6;
+				}
+				else
+					r_buf_s = 7;
+			}
+			break;
+			
+			case 6:
+			{
+				*(pdata+i) = get(sel,bottom[sel]+r_index);
+				r_index++;
+				i++;
+				if(i == r_cnt)
+					r_buf_s = 7;
+			}
+			break;
+			
+			case 7:
+			{
+				uint8_t crc_tmp = get(sel,bottom[sel]+r_index);
+				r_index++;
+				rf_pro_pack_update_crc( &(pack->rf_pack) );
+				if( crc_tmp == pack->rf_pack.crc_xor )
+					r_buf_s = 8;
+				else
+					err = -1;
+			}
+			break;
+			
+			case 8:
+			{
+				pack->rf_pack.end = get(sel,bottom[sel]+r_index);
+				r_index++;
+				err = 0;
+			}
+			break;
+			
+			default: 
+				break;
+		}
 
-	update_bottom(sel, Len);
+	}while(r_index<Size[sel]);
+
+	update_bottom(sel, r_index);
 	update_read_status(sel);
-}
 
+	return err;
+}
 /******************************************************************************
   Function:ringbuffer_get_usage_rate
   Description:

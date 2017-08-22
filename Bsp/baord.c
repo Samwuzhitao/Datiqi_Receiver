@@ -75,7 +75,7 @@ void board_init(void)
 
 	status = clicker_config_default_set();
 	printf("[ INIT ] RF INIT: %s !\r\n", (status == 0) ? "OK" : "FAIL");;
-	IWDG_Configuration();
+	//IWDG_Configuration();
 }
 
 /*******************************************************************************

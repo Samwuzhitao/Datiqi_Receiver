@@ -13,6 +13,7 @@
 
 #include "stm32f10x.h"
 #include "app_serial_cmd_process.h"
+#include "rf_link_pro.h"
 
 /* Private define ------------------------------------------------------------*/
 /* Set parameter of budffer */
@@ -45,8 +46,8 @@
 /* Private functions ---------------------------------------------------------*/
 uint8_t buffer_get_buffer_status( uint8_t sel );
 uint8_t serial_ringbuffer_get_usage_rate(uint8_t sel);
-void spi_read_data_from_buffer( uint8_t sel,uint8_t SpiMessage[] );
-void spi_write_data_to_buffer( uint8_t sel, uint8_t SpiMessage[] );
-void print_write_data_to_buffer( char *str, uint8_t len );
+int8_t  rf_read_data_from_buffer( uint8_t sel, rssi_rf_pack_t *pack );
+void    rf_write_data_to_buffer( uint8_t sel, uint8_t *buf, uint8_t len );
+void    print_write_data_to_buffer( char *str, uint8_t len );
 uint8_t print_read_data_to_buffer( uint8_t *str ,uint8_t size);
 #endif

@@ -173,20 +173,26 @@ void App_seirial_cmd_process(void)
 ******************************************************************************/
 static void uart_update_answers(void)
 {
-	static uint8_t  spi_message[255];
-	static uint8_t  Cmdtype;
-	static uint16_t uidpos = 0xFFFF,DataLen;
-	static uint16_t r_index = 0;
-	static uint8_t  r_is_last_data_full = 0;
+	rssi_rf_pack_t rssi_pack;
 
 	if( uart_send_s == 0 )
 	{
-		if(buffer_get_buffer_status(UART_RBUF) == BUF_EMPTY)
+		if(buffer_get_buffer_status( SPI_RBUF ) == BUF_EMPTY)
 			return;
 		else
 		{
-			memset(spi_message,0,255);
-			spi_read_data_from_buffer( UART_RBUF, spi_message );
+			rf_read_data_from_buffer( SPI_RBUF, &rssi_pack );	
+			b_print("{\r\n");
+			b_print("  \"fun\": \"update_answer_list\",\r\n");
+			b_print("  \"card_id\": \"%08x\",\r\n", *(uint32_t *)(rssi_pack.rf_pack.ctl.src_uid) );
+			b_print("  \"rssi\": \"-%d\",\r\n", rssi_pack.rssi );
+			b_print("  \"update_time\": \"%04d-%02d-%02d %02d:%02d:%02d:%03d\",\r\n",
+					system_rtc_timer.year, system_rtc_timer.mon, system_rtc_timer.date, 
+					system_rtc_timer.hour, system_rtc_timer.min, system_rtc_timer.sec, 
+					system_rtc_timer.ms);
+			b_print("  \"answers\": [\r\n");
+			b_print("  ]\r\n");
+			b_print("}\r\n");
 			uart_send_s = 1;
 		}
 		return;
@@ -194,136 +200,106 @@ static void uart_update_answers(void)
 
 	if( uart_send_s == 1 )
 	{
-		uint16_t AckTableLen;
 
-		AckTableLen = spi_message[14];
-		DataLen     = spi_message[14+AckTableLen+2];
-		Cmdtype     = spi_message[14+AckTableLen+1];
-		
-		if( DataLen == 0 )
-		{
-			memset(spi_message,0,255);
-			uart_send_s = 0;
-			Cmdtype     = 0;
-		}
-		else
-		{
-			if(search_uid_in_white_list(spi_message+5,&uidpos) == OPERATION_SUCCESS )
-			{
-				if(spi_message[12] != wl.uids[uidpos].rev_num)
-					uart_send_s = 2;
-				else
-				{
-					memset(spi_message,0,255);
-					uart_send_s = 0;
-					Cmdtype     = 0;
-				}	
-			}
-			else
-			{
-				memset(spi_message,0,255);
-				uart_send_s = 0;
-				Cmdtype     = 0;
-			}
-		}
+		uart_send_s = 0;
 		return;
 	}
 
-	if( uart_send_s == 2 )
-	{
-		if(( Cmdtype == 0x10 ) && ( wl.start == ON ))
-		{
-			uint8_t  raise_sign = 0;
+//	if( uart_send_s == 2 )
+//	{
+//		if(( Cmdtype == 0x10 ) && ( wl.start == ON ))
+//		{
+//			uint8_t  raise_sign = 0;
 
-			raise_sign  = *(spi_message+14+spi_message[14]+2+1);
-			b_print("{\r\n");
-			b_print("  \"fun\": \"update_answer_list\",\r\n");
-			b_print("  \"card_id\": \"%010u\",\r\n", *(uint32_t *)( wl.uids[uidpos].uid) );
-			b_print("  \"rssi\": \"-%d\",\r\n", wl.uids[uidpos].rssi );
-			b_print("  \"update_time\": \"%04d-%02d-%02d %02d:%02d:%02d:%03d\",\r\n",
-				system_rtc_timer.year, system_rtc_timer.mon, system_rtc_timer.date, 
-				system_rtc_timer.hour, system_rtc_timer.min, system_rtc_timer.sec, 
-				system_rtc_timer.ms);
-			b_print("  \"raise_hand\": \"%d\",\r\n", (raise_sign & 0x01) ? 1: 0 );
-			b_print("  \"attendance\": \"%d\",\r\n", (raise_sign & 0x02) ? 1: 0 );
-			b_print("  \"answers\": [\r\n");
-			uart_send_s = 3;
-		}
-		else
-		{
-			memset(spi_message,0,255);
-			uart_send_s = 0;
-			Cmdtype     = 0;
-		}
-		return;
-	}
-	
-	if( uart_send_s == 3 )
-	{
-		char q_t_str[2];
-		char q_r_str[7];
-		q_info_t q_tmp = {0,0,0};
-		
-		uint8_t  *prdata;
-		prdata   = spi_message+14+spi_message[14]+2+2;
-		
-		if( r_index < DataLen-3 )
-		{
-			if(r_is_last_data_full == 0)
-			{
-				q_tmp.type  = prdata[r_index] & 0x0F;
-				q_tmp.id    = ((prdata[r_index]   & 0xF0) >> 4)| 
-											((prdata[r_index+1] & 0x0F) << 4);
-				q_tmp.range = ((prdata[r_index+1] & 0xF0) >> 4)| 
-											((prdata[r_index+2] & 0x0F) << 4);
-				r_index = r_index + 2;
-				r_is_last_data_full = 1;
-			}
-			else
-			{
-				q_tmp.type  = (prdata[r_index] & 0xF0) >> 4;
-				q_tmp.id    = prdata[r_index+1];
-				q_tmp.range = prdata[r_index+2];
-				r_index = r_index + 3;
-				r_is_last_data_full = 0;
-			}
-			memset( q_r_str, 0x00, 7 );
-			memset( q_t_str, 0x00, 2 );
-			dtq_decode_answer( &q_tmp, q_r_str, q_t_str );
+//			raise_sign  = *(spi_message+14+spi_message[14]+2+1);
+//			b_print("{\r\n");
+//			b_print("  \"fun\": \"update_answer_list\",\r\n");
+//			b_print("  \"card_id\": \"%010u\",\r\n", *(uint32_t *)( wl.uids[uidpos].uid) );
+//			b_print("  \"rssi\": \"-%d\",\r\n", wl.uids[uidpos].rssi );
+//			b_print("  \"update_time\": \"%04d-%02d-%02d %02d:%02d:%02d:%03d\",\r\n",
+//				system_rtc_timer.year, system_rtc_timer.mon, system_rtc_timer.date, 
+//				system_rtc_timer.hour, system_rtc_timer.min, system_rtc_timer.sec, 
+//				system_rtc_timer.ms);
+//			b_print("  \"raise_hand\": \"%d\",\r\n", (raise_sign & 0x01) ? 1: 0 );
+//			b_print("  \"attendance\": \"%d\",\r\n", (raise_sign & 0x02) ? 1: 0 );
+//			b_print("  \"answers\": [\r\n");
+//			uart_send_s = 3;
+//		}
+//		else
+//		{
+//			memset(spi_message,0,255);
+//			uart_send_s = 0;
+//			Cmdtype     = 0;
+//		}
+//		return;
+//	}
+//	
+//	if( uart_send_s == 3 )
+//	{
+//		char q_t_str[2];
+//		char q_r_str[7];
+//		q_info_t q_tmp = {0,0,0};
+//		
+//		uint8_t  *prdata;
+//		prdata   = spi_message+14+spi_message[14]+2+2;
+//		
+//		if( r_index < DataLen-3 )
+//		{
+//			if(r_is_last_data_full == 0)
+//			{
+//				q_tmp.type  = prdata[r_index] & 0x0F;
+//				q_tmp.id    = ((prdata[r_index]   & 0xF0) >> 4)| 
+//											((prdata[r_index+1] & 0x0F) << 4);
+//				q_tmp.range = ((prdata[r_index+1] & 0xF0) >> 4)| 
+//											((prdata[r_index+2] & 0x0F) << 4);
+//				r_index = r_index + 2;
+//				r_is_last_data_full = 1;
+//			}
+//			else
+//			{
+//				q_tmp.type  = (prdata[r_index] & 0xF0) >> 4;
+//				q_tmp.id    = prdata[r_index+1];
+//				q_tmp.range = prdata[r_index+2];
+//				r_index = r_index + 3;
+//				r_is_last_data_full = 0;
+//			}
+//			memset( q_r_str, 0x00, 7 );
+//			memset( q_t_str, 0x00, 2 );
+//			dtq_decode_answer( &q_tmp, q_r_str, q_t_str );
 
-			b_print("    {");
-			b_print("\"type\": \"%s\", ",q_t_str);
-			b_print("\"id\": \"%d\", ", q_tmp.id);
-			b_print("\"answer\": \"%s\" ",q_r_str);
-			if( r_index < DataLen-2 )
-				b_print("},\r\n");
-			else
-			{
-				b_print("}\r\n");
-				b_print("  ]\r\n");
-				b_print("}\r\n");
-				uart_send_s = 4;
-				r_index     = 0;
-				r_is_last_data_full = 0;
-			}
-			return;
-		}
-	}
-	
-	if(uart_send_s == 4)
-	{
-		uint8_t is_retuen_ack = 0;
-		if(is_retuen_ack == 1)
-		{
-			uart_send_s = 2;
-		}
-		else
-		{
-			memset(spi_message,0,255);
-			uart_send_s = 0;
-			Cmdtype     = 0;
-		}
-	}
+//			b_print("    {");
+//			b_print("\"type\": \"%s\", ",q_t_str);
+//			b_print("\"id\": \"%d\", ", q_tmp.id);
+//			b_print("\"answer\": \"%s\" ",q_r_str);
+//			if( r_index < DataLen-2 )
+//				b_print("},\r\n");
+//			else
+//			{
+//				b_print("}\r\n");
+//				b_print("  ]\r\n");
+//				b_print("}\r\n");
+//				uart_send_s = 4;
+//				r_index     = 0;
+//				r_is_last_data_full = 0;
+//			}
+//			return;
+//		}
+//	}
+//	
+//	if(uart_send_s == 4)
+//	{
+//		uint8_t is_retuen_ack = 0;
+//		if(is_retuen_ack == 1)
+//		{
+//			uart_send_s = 2;
+//		}
+//		else
+//		{
+//			memset(spi_message,0,255);
+//			uart_send_s = 0;
+//			Cmdtype     = 0;
+//		}
+//	}
 }
 
 void serial_cmd_clear_uid_list(const cJSON *object)
@@ -439,7 +415,6 @@ void serial_cmd_one_key_off(const cJSON *object)
 	b_print("  \"result\": \"0\"\r\n");
 	b_print("}\r\n");
 }
-
 
 void serial_cmd_set_channel(const cJSON *object)
 {
