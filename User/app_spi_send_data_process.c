@@ -47,9 +47,18 @@ void spi_rx_data_process( void )
 {
 	if( irq_rbuf_cnt > 0 )
 	{
-		//uint8_t i;
-		r_cmd_ctl.cmd = irq_rbuf[irq_rbuf_cnt_r].cmd;
-		r_cmd_ctl.dev = irq_rbuf[irq_rbuf_cnt_r].dev_t;
+		if((irq_rbuf[irq_rbuf_cnt_r].cmd == 0x22) && 
+		(irq_rbuf[irq_rbuf_cnt_r].dev_t == DEVICE_RX))
+		{
+			/* SPI 主动提交的数据 */
+			
+		}
+		else
+		{
+			/* SPI 被动应答 */
+//    uint8_t i;
+			r_cmd_ctl.cmd = irq_rbuf[irq_rbuf_cnt_r].cmd;
+			r_cmd_ctl.dev = irq_rbuf[irq_rbuf_cnt_r].dev_t;
 //		b_print("    rx_buf: ");
 //		b_print("%02x %02x %02x %02x",                                      \
 //			irq_rbuf[irq_rbuf_cnt_r].header, irq_rbuf[irq_rbuf_cnt_r].dev_t, \
@@ -58,6 +67,7 @@ void spi_rx_data_process( void )
 //			b_print(" %02x", irq_rbuf[irq_rbuf_cnt_r].data[i]);
 //		b_print(" %02x %02x \r\n",
 //			irq_rbuf[irq_rbuf_cnt_r].xor, irq_rbuf[irq_rbuf_cnt_r].end);
+		}
 		irq_rbuf_cnt--;
 		irq_rbuf_cnt_r = (irq_rbuf_cnt_r + 1) % SPI_SEND_DATA_BUFFER_COUNT_MAX;
 	}
@@ -76,7 +86,7 @@ void spi_tx_data_process(void)
 		}
 		return;
 	}
-	
+
 	if( sbuf_s == 1 )
 	{
 		ack_flg = spi_cmd_ack_check( &r_cmd_ctl );
@@ -132,26 +142,15 @@ void sbuf_s_1_timer_init( void )
 void spi_timer_init( void )
 {
     sw_create_timer( &spi_send_data1_timer , 5, 1, 2,&(sbuf_s), sbuf_s_1_timer_init );
-//sw_create_timer( &spi_send_data2_timer , delay1_ms, 2, 3,&(sbuf_s), sbuf_s_1_timer_init );
 }
 
 /******************************************************************************
-  Function: spi_write_data_to_buf
+  Function: spi_malloc_buf
   Description: store data to spi send data buffer
   Input :
   Return:
   Others:None
 ******************************************************************************/
-void spi_write_data_to_buf( u8 *buf, u8 len, u8 cnt, u8 us, u8 ms )
-{
-	spi_pro_init_pack_rf( &sbuf[sbuf_cnt_w], RF_DATA_WITH_PRE, 0x02 );
-	sbuf[sbuf_cnt_w].length = len;
-	memcpy( sbuf[sbuf_cnt_w].data, buf, len );
-	spi_pro_pack_update_crc( &sbuf[sbuf_cnt_w] );
-	sbuf_cnt_w = (sbuf_cnt_w + 1) % SPI_SEND_DATA_BUFFER_COUNT_MAX;
-	sbuf_cnt++;
-}
-
 spi_cmd_t *spi_malloc_buf( void )
 {
 	spi_cmd_t *pdata;

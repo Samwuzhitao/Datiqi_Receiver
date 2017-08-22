@@ -55,6 +55,7 @@ static void json_decode_att( uint8_t *pdada, char *v_str )
     }
 }
 
+
 void pack_init_answer( answer_cmd_t *cmd )
 {
     s_is_last_data_full = 0;
@@ -252,7 +253,6 @@ void dtq_encode_answer( q_info_t *q_tmp, uint8_t *sbuf, uint8_t *sbuf_len )
 #ifdef ENABLE_ANSWER_ENCODE_DEBUG
     {
         uint8_t i;
-			  //b_print("s_len = %d \r\n",*sbuf_len);
         b_print("ANSWER_ENCMDE:");
         b_print("  ");
         for( i=0; i<*sbuf_len+21; i++ )
@@ -263,7 +263,6 @@ void dtq_encode_answer( q_info_t *q_tmp, uint8_t *sbuf, uint8_t *sbuf_len )
     }
 #endif
     *sbuf_len = s_cnt;
-		//b_print("e_len = %d \r\n",*sbuf_len);
 }
 
 void dtq_decode_answer( q_info_t * q_tmp, char *q_r, char * q_t )
@@ -358,4 +357,63 @@ void serial_cmd_answer_start( char *json_str )
     b_print("  \"fun\": \"answer_start\",\r\n");
     b_print("  \"result\": \"%d\"\r\n",err);
     b_print("}\r\n");
+}
+
+int8_t rf_pack_del_answer_cmd_data( void )
+{
+	uint8_t r_index = 0, w_index = 0;
+	uint8_t err = 0;
+	answer_cmd_t *pcmd;
+
+	/* 剔除答题指令 */
+	do
+	{
+		pcmd = (answer_cmd_t *)(rf_data.data + r_index);
+		r_index = r_index + pcmd->len + 2;
+
+		if( pcmd->cmd != 0x10 )
+		{
+#ifdef ENABLE_ANSWER_ENCODE_DEBUG
+			{
+				uint8_t i;
+				uint8_t *pdata = (uint8_t *)pcmd;
+				b_print("RF DATA:");
+				for( i =0; i < pcmd->len + 2;i++)
+					b_print(" %02x",*(pdata+i));
+				b_print("\r\n");
+			}
+#endif
+			memcpy( rf_data.data+w_index, (uint8_t *)pcmd, pcmd->len + 2);
+			w_index = w_index + pcmd->len + 2;
+		}
+	}while( r_index < rf_data.pack_len );
+	rf_data.pack_len = w_index;
+
+	 /* 增加清屏指令 */
+	{
+		uint8_t is_add_new_data = 1;
+		r_index = 0;
+		clear_screen_cmd_t cear_screen_cmd = RF_CMD_CLEAR_SCREEN_DEFAULT;
+		do
+		{
+			pcmd = (answer_cmd_t *)(rf_data.data + r_index);
+			r_index = r_index + pcmd->len + 2;
+			if( pcmd->cmd == cear_screen_cmd.cmd )
+			{
+				 pcmd->buf[0] = 1;
+				is_add_new_data = 0;
+			}
+		}while( r_index < rf_data.pack_len );
+		if(is_add_new_data == 1)
+		{
+			rf_pack_add_data( &rf_data, (uint8_t *)&cear_screen_cmd, 
+			                  sizeof(clear_screen_cmd_t));
+		}
+		err =	rf_send_data_start();
+	}
+
+	rf_pro_seq_num_add( &rf_data );
+	rf_pro_pack_num_add( &rf_data );
+	rf_pro_pack_update_crc( &rf_data );
+	return err;
 }

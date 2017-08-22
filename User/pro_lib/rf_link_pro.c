@@ -13,8 +13,8 @@
 #include "json_decode.h"
 #include "app_spi_send_data_process.h"
 
-extern revicer_typedef   revicer;
-
+extern revicer_typedef revicer;
+Timer_typedef  spi_send_2_timer,spi_send_1_timer;
 static uint8_t seq_num = 1, pac_num = 1;
 static uint8_t send_cmd_s = 0;
 	
@@ -36,7 +36,7 @@ void rf_pro_pack_num_add( rf_pack_t *rf_pack )
 		pac_num = 1;
 }
 
-static void rf_pro_seq_num_add( rf_pack_t *rf_pack )
+void rf_pro_seq_num_add( rf_pack_t *rf_pack )
 {
 	seq_num = (seq_num + 1) % 255;
 	if( seq_num == 0 )
@@ -131,9 +131,9 @@ void r_send_1_cb( void )
   Return:
   Others:None
 ******************************************************************************/
-void send_data_process_timer_init( void )
+void rf_send_data_process_timer_init( void )
 {
-  sw_create_timer(&spi_300ms_timer , 300, 2, 3, &(send_cmd_s), r_send_1_cb );
-  sw_create_timer(&spi_1s_timer    ,1000, 5, 6, &(send_cmd_s), r_send_2_cb );
+  sw_create_timer( &spi_send_1_timer, 300, 2, 3, &(send_cmd_s), r_send_1_cb );
+  sw_create_timer( &spi_send_2_timer,1000, 5, 6, &(send_cmd_s), r_send_2_cb );
 }
 

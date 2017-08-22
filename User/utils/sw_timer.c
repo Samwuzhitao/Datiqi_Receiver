@@ -8,7 +8,6 @@
   ******************************************************************************
   */
 
-#include "sw_timer.h"
 #include "main.h"
 /* Private variables ---------------------------------------------------------*/
 static __IO uint32_t TimingDelay;
@@ -16,7 +15,7 @@ __IO uint32_t PowerOnTime;
 timer_list_typedef timer_list;
 uint8_t system_timer_status;
 
-Timer_typedef spi_1s_timer,spi_300ms_timer,system_timer;
+Timer_typedef system_timer;
 Timer_typedef spi_send_data1_timer;
 Timer_typedef card_buzzer_timer,card_second_find_timer;
 RTC_timer_Typedef system_rtc_timer;

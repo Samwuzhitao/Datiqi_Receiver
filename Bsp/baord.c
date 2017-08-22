@@ -54,7 +54,7 @@ void board_init(void)
 	/* init software timer */
 	sw_timer_init();
 	system_timer_init();
-	send_data_process_timer_init();
+	rf_send_data_process_timer_init();
 	spi_timer_init();
 	card_timer_init();
 

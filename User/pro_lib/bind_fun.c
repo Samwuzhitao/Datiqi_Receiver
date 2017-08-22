@@ -108,3 +108,4 @@ void serial_cmd_wireless_bind_start( char *json_str )
 	b_print("  \"result\": \"%d\"\r\n",err);
 	b_print("}\r\n");
 }
+

@@ -566,7 +566,6 @@ void serial_cmd_raise_hand_sign_in_set(const cJSON *object)
 	uint8_t raise_hand,sign_in;
 	char    *p_sign_in_data;
 	char    *p_raise_hand_data;
-//	nrf_transmit_parameter_t transmit_config;
 	char *p_cmd_str = cJSON_GetObjectItem(object, "fun")->valuestring;
 
 	b_print("{\r\n");
@@ -606,22 +605,10 @@ void serial_cmd_raise_hand_sign_in_set(const cJSON *object)
 		rf_var.tx_len = 1;
 		rf_var.cmd = 0x10;
 	}
-	/* 准备发送数据管理块 */
-///	memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
-//	memset(nrf_data.dtq_uid,    0x00, 4);
-//	memcpy(nrf_data.jsq_uid,    revicer.uid, 4);
-//	memset(transmit_config.dist,0x00, 4);
-	//send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
-	//send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
-
-	/* 启动发送数据状态机 */
-	//set_send_data_status( SEND_500MS_DATA_STATUS );
 
 	b_print("  \"result\": \"0\"\r\n");
 	b_print("}\r\n");
 }
-
-
 
 void serial_cmd_check_config(const cJSON *object)
 {
@@ -678,28 +665,6 @@ void serial_cmd_check_config(const cJSON *object)
 	}
 	b_print("  ]\r\n");
 	b_print("}\r\n");
-}
-
-
-
-void serial_cmd_bootloader(const cJSON *object)
-{
-	/* 打印返回 */
-	b_print("{\r\n");
-	b_print("  \"fun\": \"bootloader\",\r\n");
-	b_print("  \"result\": \"0\"\r\n");
-	b_print("}\r\n");
-	DelayMs(200);
-	{
-		uint32_t JumpAddress;
-		pFunction JumpToBootloader;
-		/* Jump to user application */
-		JumpAddress = *(__IO uint32_t*) (0x8000000 + 4);
-		JumpToBootloader = (pFunction) JumpAddress;
-		/* Initialize user application's Stack Pointer */
-		__set_MSP(*(__IO uint32_t*) 0x8000000);
-		JumpToBootloader();
-	}
 }
 
 void serial_cmd_attendance_24g(const cJSON *object)
@@ -813,25 +778,30 @@ void serial_cmd_self_inspection(const cJSON *object)
 
 void serial_cmd_answer_stop(const cJSON *object)
 {
-    uint8_t sdata_index;
-    uint8_t *pSdata;
-    pSdata = (uint8_t *)rf_var.tx_buf+1;
-    *(pSdata+(sdata_index++)) = 0x01;
-    rf_var.cmd = 0x11;
-    rf_var.tx_len = sdata_index+2 ;
-    {
-//        nrf_transmit_parameter_t transmit_config;
-//        memset(list_tcb_table[SEND_DATA_ACK_TABLE],0,16);
-//        memset(nrf_data.dtq_uid,    0x00, 4);
-//        memset(transmit_config.dist,0x00, 4);
-        //send_data_process_tcb.is_pack_add   = PACKAGE_NUM_ADD;
-        //send_data_process_tcb.logic_pac_add = PACKAGE_NUM_SAM;
-        //set_send_data_status( SEND_500MS_DATA_STATUS );
-    }
-    b_print("{\r\n");
-    b_print("  \"fun\": \"answer_stop\",\r\n");
-    b_print("  \"result\": \"0\"\r\n");
-    b_print("}\r\n");
+	uint8_t err = rf_pack_del_answer_cmd_data();
+	b_print("{\r\n");
+	b_print("  \"fun\": \"answer_stop\",\r\n");
+	b_print("  \"result\": \"%d\"\r\n",err);
+	b_print("}\r\n");
 }
 
+void serial_cmd_bootloader(const cJSON *object)
+{
+	/* 打印返回 */
+	b_print("{\r\n");
+	b_print("  \"fun\": \"bootloader\",\r\n");
+	b_print("  \"result\": \"0\"\r\n");
+	b_print("}\r\n");
+	DelayMs(200);
+	{
+		uint32_t JumpAddress;
+		pFunction JumpToBootloader;
+		/* Jump to user application */
+		JumpAddress = *(__IO uint32_t*) (0x8000000 + 4);
+		JumpToBootloader = (pFunction) JumpAddress;
+		/* Initialize user application's Stack Pointer */
+		__set_MSP(*(__IO uint32_t*) 0x8000000);
+		JumpToBootloader();
+	}
+}
 /**************************************END OF FILE****************************/

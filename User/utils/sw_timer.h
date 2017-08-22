@@ -7,9 +7,8 @@
   * @brief   	delay function
   ******************************************************************************
   */
-
-#ifndef __DELAY_H_
-#define __DELAY_H_
+#ifndef __SW_TIMER_H_
+#define __SW_TIMER_H_
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x.h"
@@ -56,7 +55,7 @@ typedef struct
 }RTC_timer_Typedef;
 
 extern timer_list_typedef timer_list;
-extern Timer_typedef spi_1s_timer,spi_300ms_timer,system_timer;
+extern Timer_typedef system_timer;
 extern Timer_typedef spi_send_data1_timer;
 extern RTC_timer_Typedef system_rtc_timer;
 extern Timer_typedef card_buzzer_timer,card_second_find_timer;

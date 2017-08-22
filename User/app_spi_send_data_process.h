@@ -20,7 +20,6 @@ extern uint16_t   irq_rbuf_cnt_w, irq_rbuf_cnt_r, irq_rbuf_cnt;
 void change_spi_send_data_process_status( uint8_t new_status );
 uint8_t get_spi_send_data_process_status( void );
 void App_spi_send_data_process(void);
-void spi_send_data_process_timer_init( void );
 void spi_write_data_to_buf( u8 *buf, u8 len, u8 cnt, u8 us, u8 ms );
 uint8_t get_spi_status( void );
 

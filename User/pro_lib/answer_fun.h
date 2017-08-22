@@ -12,7 +12,7 @@
 
 #include "main.h"
 
-#define ENABLE_ANSWER_ENCODE_DEBUG  
+//#define ENABLE_ANSWER_ENCODE_DEBUG  
 
 #define AS_FUN                  0
 #define AS_TIME                 1
@@ -75,15 +75,27 @@ typedef struct
 	hand_att_t hand_att;
 }hand_att_cmd_t;
 
+typedef struct
+{
+	uint8_t    cmd;
+	uint8_t    len;
+	hand_att_t clear_screen;
+}clear_screen_cmd_t;
+
 /* 绑定信道默认配置 **********************************************/
 #define RF_CMD_HAND_ATT_DEFAULT         {.cmd      = 0x12,        \
                                          .len      = 0x01,        \
-                                         .hand_att = 0x00,        }
+                                         .hand_att = 0x00         }
+
+#define RF_CMD_CLEAR_SCREEN_DEFAULT     {.cmd          = 0x11,    \
+                                         .len          = 0x01,    \
+                                         .clear_screen = 0x01     }
 
 extern rf_pack_t rf_data;
 
 void pack_init_answer( answer_cmd_t *cmd );
 void answer_pack_quenum_add( answer_cmd_t *cmd );
+int8_t rf_pack_del_answer_cmd_data( void );
 
 void dtq_decode_answer( q_info_t *q_tmp, char *q_r, char * q_t );
 void dtq_encode_answer( q_info_t *q_tmp, uint8_t *sbuf, uint8_t *sbuf_len );

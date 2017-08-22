@@ -316,8 +316,7 @@ uint8_t spi_cmd_ack_check( spi_cmd_ctl_t *r_cmd_ctl )
 {
 	if((r_cmd_ctl->dev == s_cmd_ctl.dev) &&
 		 (r_cmd_ctl->cmd == s_cmd_ctl.cmd) &&
-	   (s_cmd_ctl.cmd != 0)
-	  )
+	   (s_cmd_ctl.cmd != 0))
 		return 1;
 	else
 		return 0;
