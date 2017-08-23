@@ -35,14 +35,9 @@ int main(void)
 		rf_s_cmd_process();
 		/* spi send data process */
 		spi_s_cmd_process();
-
 		/* serial cmd processing process */
 		App_seirial_cmd_process();
-
 		/* MI Card processing process */
 		App_card_process();
-
-		/*revicer spi send data process */
-
 	}	
 }

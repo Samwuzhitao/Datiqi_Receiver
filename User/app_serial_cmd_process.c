@@ -92,11 +92,24 @@ void uart_cmd_decode(void)
 		memcpy(header,pdata+8,14);
 		if( strncmp( header, "answer_start", sizeof("answer_start")-1)== 0 )
 		{
-			serial_cmd_answer_start( pdata );
+			int8_t err = 0;
+			answer_cmd_t as_cmd;
+			serial_cmd_answer_decode( pdata, &as_cmd );
+			rf_pack_add_answer_start_cmd( &as_cmd );
+			err =	rf_send_data_start();
+			b_print("{\r\n");
+			b_print("  \"fun\": \"answer_start\",\r\n");
+			b_print("  \"result\": \"%d\"\r\n", err );
+			b_print("}\r\n");
 		}
 		else if( strncmp( header, "bind_start", sizeof("bind_start")-1)== 0 )
 		{
-			serial_cmd_wireless_bind_start( pdata );
+			uint8_t mode = 0, err = 0;
+			err = serial_cmd_wireless_bind_decode( pdata, &mode );
+			b_print("{\r\n");
+			b_print("  \"fun\": \"bind_start\",\r\n");
+			b_print("  \"result\": \"%d\"\r\n", err);
+			b_print("}\r\n");
 		}
 		else
 		{
@@ -209,11 +222,13 @@ static void uart_update_answers(void)
 			if( answer_cmd->cmd == 0x10 )
 			{
 				uint8_t  i = 0, *prdata = answer_cmd->buf + 1;
-				q_info_t q_tmp = { 0, 0, 0 };
 				char q_t_str[2];
-		    char q_r_str[7];
+				char q_r_str[7];
 				do
 				{
+					q_info_t q_tmp = { 0, 0, 0 };
+					memset( q_t_str, 0x00, 2);
+					memset( q_r_str, 0x00, 7);
 					if(r_is_last_data_full == 0)
 					{
 						q_tmp.type  = prdata[i] & 0x0F;
@@ -237,112 +252,20 @@ static void uart_update_answers(void)
 					b_print("\"type\": \"%s\", ",q_t_str);
 					b_print("\"id\": \"%d\", ", q_tmp.id);
 					b_print("\"answer\": \"%s\" ",q_r_str);
-				  b_print("},\r\n");
-				}while( i < answer_cmd->len );
-				b_print("}\r\n");
-				b_print("  ]\r\n");
-				b_print("}\r\n");
+					if( i < (answer_cmd->len-1-r_is_last_data_full) )
+						b_print("},\r\n");
+					else
+					{
+						b_print("}\r\n");
+						b_print("  ]\r\n");
+						b_print("}\r\n");
+					}
+				}while(i < (answer_cmd->len-1-r_is_last_data_full));
 			}
 		}while( r_index < rf_data.pack_len );
 		uart_send_s = 0;
 		return;
 	}
-
-//	if( uart_send_s == 2 )
-//	{
-//		if(( Cmdtype == 0x10 ) && ( wl.start == ON ))
-//		{
-//			uint8_t  raise_sign = 0;
-
-//			raise_sign  = *(spi_message+14+spi_message[14]+2+1);
-//			b_print("{\r\n");
-//			b_print("  \"fun\": \"update_answer_list\",\r\n");
-//			b_print("  \"card_id\": \"%010u\",\r\n", *(uint32_t *)( wl.uids[uidpos].uid) );
-//			b_print("  \"rssi\": \"-%d\",\r\n", wl.uids[uidpos].rssi );
-//			b_print("  \"update_time\": \"%04d-%02d-%02d %02d:%02d:%02d:%03d\",\r\n",
-//				system_rtc_timer.year, system_rtc_timer.mon, system_rtc_timer.date, 
-//				system_rtc_timer.hour, system_rtc_timer.min, system_rtc_timer.sec, 
-//				system_rtc_timer.ms);
-//			b_print("  \"raise_hand\": \"%d\",\r\n", (raise_sign & 0x01) ? 1: 0 );
-//			b_print("  \"attendance\": \"%d\",\r\n", (raise_sign & 0x02) ? 1: 0 );
-//			b_print("  \"answers\": [\r\n");
-//			uart_send_s = 3;
-//		}
-//		else
-//		{
-//			memset(spi_message,0,255);
-//			uart_send_s = 0;
-//			Cmdtype     = 0;
-//		}
-//		return;
-//	}
-//	
-//	if( uart_send_s == 3 )
-//	{
-//		char q_t_str[2];
-//		char q_r_str[7];
-//		q_info_t q_tmp = {0,0,0};
-//		
-//		uint8_t  *prdata;
-//		prdata   = spi_message+14+spi_message[14]+2+2;
-//		
-//		if( r_index < DataLen-3 )
-//		{
-//			if(r_is_last_data_full == 0)
-//			{
-//				q_tmp.type  = prdata[r_index] & 0x0F;
-//				q_tmp.id    = ((prdata[r_index]   & 0xF0) >> 4)| 
-//											((prdata[r_index+1] & 0x0F) << 4);
-//				q_tmp.range = ((prdata[r_index+1] & 0xF0) >> 4)| 
-//											((prdata[r_index+2] & 0x0F) << 4);
-//				r_index = r_index + 2;
-//				r_is_last_data_full = 1;
-//			}
-//			else
-//			{
-//				q_tmp.type  = (prdata[r_index] & 0xF0) >> 4;
-//				q_tmp.id    = prdata[r_index+1];
-//				q_tmp.range = prdata[r_index+2];
-//				r_index = r_index + 3;
-//				r_is_last_data_full = 0;
-//			}
-//			memset( q_r_str, 0x00, 7 );
-//			memset( q_t_str, 0x00, 2 );
-//			dtq_decode_answer( &q_tmp, q_r_str, q_t_str );
-
-//			b_print("    {");
-//			b_print("\"type\": \"%s\", ",q_t_str);
-//			b_print("\"id\": \"%d\", ", q_tmp.id);
-//			b_print("\"answer\": \"%s\" ",q_r_str);
-//			if( r_index < DataLen-2 )
-//				b_print("},\r\n");
-//			else
-//			{
-//				b_print("}\r\n");
-//				b_print("  ]\r\n");
-//				b_print("}\r\n");
-//				uart_send_s = 4;
-//				r_index     = 0;
-//				r_is_last_data_full = 0;
-//			}
-//			return;
-//		}
-//	}
-//	
-//	if(uart_send_s == 4)
-//	{
-//		uint8_t is_retuen_ack = 0;
-//		if(is_retuen_ack == 1)
-//		{
-//			uart_send_s = 2;
-//		}
-//		else
-//		{
-//			memset(spi_message,0,255);
-//			uart_send_s = 0;
-//			Cmdtype     = 0;
-//		}
-//	}
 }
 
 void serial_cmd_clear_uid_list(const cJSON *object)
@@ -579,55 +502,6 @@ void serial_cmd_set_student_id(const cJSON *object)
 	free(out);
 }
 
-void serial_cmd_raise_hand_sign_in_set(const cJSON *object)
-{
-	uint8_t raise_hand,sign_in;
-	char    *p_sign_in_data;
-	char    *p_raise_hand_data;
-	char *p_cmd_str = cJSON_GetObjectItem(object, "fun")->valuestring;
-
-	b_print("{\r\n");
-	if(strncmp(p_cmd_str, "set_raise_hand", sizeof("set_raise_hand")-1)== 0 )
-	{
-		p_raise_hand_data = cJSON_GetObjectItem(object,"raise_hand")->valuestring;
-		raise_hand = atoi(p_raise_hand_data);
-		b_print("  \"fun\": \"set_raise_hand\",\r\n");
-	}
-
-	if(strncmp(p_cmd_str, "set_sign_in", sizeof("set_sign_in")-1)== 0 )
-	{
-		p_sign_in_data = cJSON_GetObjectItem(object,"attendance")->valuestring;
-		sign_in = atoi(p_sign_in_data);
-		b_print("  \"fun\": \"set_sign_in\",\r\n");
-	}
-
-	/* 准备发送数据 */
-	if( raise_hand <= 1 )
-	{
-		if( raise_hand == 0 )
-			rf_var.tx_buf[0] &= 0xFE;
-		else
-			rf_var.tx_buf[0] |= 0x01;
-	}
-
-	if( sign_in <= 1 )
-	{
-		if( sign_in == 0 )
-			rf_var.tx_buf[0] &= 0xFD;
-		else
-			rf_var.tx_buf[0] |= 0x02;
-	}
-
-	if(rf_var.tx_len == 0)
-	{
-		rf_var.tx_len = 1;
-		rf_var.cmd = 0x10;
-	}
-
-	b_print("  \"result\": \"0\"\r\n");
-	b_print("}\r\n");
-}
-
 void serial_cmd_check_config(const cJSON *object)
 {
 	int8_t tx_power = 0;
@@ -823,4 +697,29 @@ void serial_cmd_bootloader(const cJSON *object)
 		JumpToBootloader();
 	}
 }
+void serial_cmd_raise_hand_sign_in_set(const cJSON *object)
+{
+	char    *p_str;
+	int8_t  err = 0;
+	char *p_cmd_str = cJSON_GetObjectItem(object, "fun")->valuestring;
+
+	b_print("{\r\n");
+	if(strncmp(p_cmd_str, "set_raise_hand", sizeof("set_raise_hand")-1)== 0 )
+	{
+		p_str = cJSON_GetObjectItem(object,"raise_hand")->valuestring;
+		s_hand_att_cmd.hand_att.bits.hand = atoi(p_str) & 0x01;
+		b_print("  \"fun\": \"set_raise_hand\",\r\n");
+	}
+	if(strncmp(p_cmd_str, "set_sign_in", sizeof("set_sign_in")-1)== 0 )
+	{
+		p_str = cJSON_GetObjectItem(object,"attendance")->valuestring;
+		s_hand_att_cmd.hand_att.bits.att = atoi(p_str) & 0x01;
+		b_print("  \"fun\": \"set_sign_in\",\r\n");
+	}
+	rf_pack_add_raise_hand_att_cmd( &s_hand_att_cmd );
+	err =	rf_send_data_start();
+	b_print("  \"result\": \"%d\"\r\n",err);
+	b_print("}\r\n");
+}
+
 /**************************************END OF FILE****************************/

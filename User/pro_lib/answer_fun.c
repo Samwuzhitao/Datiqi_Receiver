@@ -6,7 +6,7 @@
 #include "app_spi_send_data_process.h"
 
 hand_att_cmd_t s_hand_att_cmd = RF_CMD_HAND_ATT_DEFAULT;
-rf_pack_t      rf_data;
+rf_pack_t      rf_data        = RF_CMD_INIT_DEFAULT ;
 
 static uint8_t  answer_quenum     = 1;
 static uint8_t  s_is_last_data_full = 0;
@@ -278,7 +278,7 @@ void dtq_decode_answer( q_info_t * q_tmp, char *q_r, char * q_t )
     }
 }
 
-void serial_cmd_answer_start( char *json_str )
+int8_t serial_cmd_answer_decode( char *json_str, answer_cmd_t *as_cmd )
 {
     /* prase data control */
 		uint8_t  set_raise_hand_att_flg = 0;
@@ -289,13 +289,7 @@ void serial_cmd_answer_start( char *json_str )
     /* send data control */
     q_info_t  q_tmp = { 0, 0, 0 };
 
-    answer_cmd_t   *as_cmd = (answer_cmd_t *)rf_data.data;
-
-		rf_pro_init_pack( &rf_data );
-		rf_pro_pack_num_add( &rf_data );
-
 		pack_init_answer( as_cmd );
-		answer_pack_quenum_add( as_cmd );
 
 		do
 		{
@@ -355,21 +349,14 @@ void serial_cmd_answer_start( char *json_str )
 				}
 		}while( ( p_end - json_str ) < str_len-3 );
 		as_cmd->len = as_cmd->len + s_is_last_data_full;
-		rf_data.pack_len = as_cmd->len + 2;
 		if( set_raise_hand_att_flg == 1)
 			rf_pack_add_raise_hand_att_cmd( &s_hand_att_cmd );
-		err =	rf_send_data_start();
-
-    b_print("{\r\n");
-    b_print("  \"fun\": \"answer_start\",\r\n");
-    b_print("  \"result\": \"%d\"\r\n",err);
-    b_print("}\r\n");
+		return err;
 }
 
-void rf_pack_del_answer_cmd_no_crc( void )
+void rf_pack_del_cmd_no_crc( uint8_t del_cmd )
 {
 	uint8_t r_index = 0, w_index = 0;
-	uint8_t err = 0;
 	answer_cmd_t *pcmd;
 	/* 剔除答题指令 */
 	do
@@ -377,7 +364,7 @@ void rf_pack_del_answer_cmd_no_crc( void )
 		pcmd = (answer_cmd_t *)(rf_data.data + r_index);
 		r_index = r_index + pcmd->len + 2;
 
-		if( pcmd->cmd != 0x10 )
+		if( pcmd->cmd != del_cmd )
 		{
 #ifdef ENABLE_ANSWER_ENCODE_DEBUG
 			{
@@ -398,8 +385,7 @@ void rf_pack_del_answer_cmd_no_crc( void )
 
 int8_t rf_check_has_cmd( uint8_t check_cmd, answer_cmd_t *r_cmd )
 {
-	uint8_t r_index = 0;
-	uint8_t err = 0, is_has_cmd = 0;
+	uint8_t r_index = 0, is_has_cmd = 0;
 	answer_cmd_t *pcmd;
 	/* 检查是否有举手指令，有指令直接修改指令 */
 	do
@@ -433,13 +419,11 @@ int8_t rf_pack_add_answer_stop_cmd( void )
 	answer_cmd_t *pcmd;
 	clear_screen_cmd_t cear_screen_cmd = RF_CMD_CLEAR_SCREEN_DEFAULT;
 	/* 剔除就有的答题指令 */
-	rf_pack_del_answer_cmd_no_crc();
+	rf_pack_del_cmd_no_crc( RF_CMD_ANSWER_START );
 	/* 检查指令是否已经在运输帧中 */
 	is_has_cmd = rf_check_has_cmd( RF_CMD_CLERA_SCREEN, pcmd );
   /* 添加指令到运输帧 */
-	if(is_has_cmd == 1)
-		memcpy( (uint8_t *)pcmd, (uint8_t *)&cear_screen_cmd, sizeof(clear_screen_cmd_t));
-	else
+	if(is_has_cmd != 1)
 		rf_pack_add_data( &rf_data, (uint8_t *)&cear_screen_cmd, sizeof(clear_screen_cmd_t));
 	/* 更新 包号 帧号和CRC */
 	rf_pro_seq_num_add( &rf_data );
@@ -456,9 +440,30 @@ int8_t rf_pack_add_raise_hand_att_cmd( hand_att_cmd_t *cmd )
   is_has_cmd = rf_check_has_cmd( RF_CMD_RAISE_HAND_ATT, pcmd );
 	/* 添加指令到运输帧 */
 	if( is_has_cmd == 1 )
-		memcpy( (uint8_t *)pcmd, (uint8_t *)cmd, sizeof(clear_screen_cmd_t));
-	else
-		rf_pack_add_data( &rf_data, (uint8_t *)cmd, sizeof(clear_screen_cmd_t));
+		rf_pack_del_cmd_no_crc( RF_CMD_RAISE_HAND_ATT );
+
+	rf_pack_add_data( &rf_data, (uint8_t *)cmd, sizeof(hand_att_cmd_t));
+	/* 更新 包号 帧号和CRC */
+	rf_pro_seq_num_add( &rf_data );
+	rf_pro_pack_num_add( &rf_data );
+	rf_pro_pack_update_crc( &rf_data );
+	return err;
+}
+
+int8_t rf_pack_add_answer_start_cmd( answer_cmd_t *cmd )
+{
+	uint8_t err = 0, is_has_cmd = 0;
+	answer_cmd_t *pcmd;
+	/* 检测是否有清屏指令，有则剔除此指令 */
+	is_has_cmd = rf_check_has_cmd( RF_CMD_CLERA_SCREEN, pcmd );
+	if( is_has_cmd == 1)
+		rf_pack_del_cmd_no_crc( RF_CMD_CLERA_SCREEN );
+	/* 检测是否已经有答题器指令 */
+	is_has_cmd = rf_check_has_cmd( RF_CMD_ANSWER_START, pcmd );
+	if( is_has_cmd == 1)
+		rf_pack_del_cmd_no_crc( RF_CMD_ANSWER_START );
+	/* 添加实际指令 */
+	rf_pack_add_data( &rf_data, (uint8_t *)cmd, cmd->len + 2 );
 	/* 更新 包号 帧号和CRC */
 	rf_pro_seq_num_add( &rf_data );
 	rf_pro_pack_num_add( &rf_data );

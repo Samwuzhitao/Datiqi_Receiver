@@ -22,6 +22,12 @@ int8_t rf_send_data_start( void )
 {
 	if((send_cmd_s == 0) || (send_cmd_s >= 4))
 	{
+		if(send_cmd_s == 0)
+		{
+			memcpy( rf_data.ctl.src_uid, revicer.uid, 4 );
+			memset( rf_data.ctl.dst_uid, 0x00, 4 );
+			rf_pro_pack_update_crc( &rf_data );
+		}
 		send_cmd_s = 1;
 		return 0;
 	}
@@ -92,16 +98,19 @@ void rf_s_cmd_process( void )
 	if( send_cmd_s == 1 )
 	{
 		spi_cmd_t *s_data = spi_malloc_buf();
-		spi_pro_init_pack_rf( s_data, RF_DATA_WITH_PRE, 0x04 );
+		spi_pro_init_pack_rf( s_data, RF_DATA_WITH_PRE, clicker_set.N_CH_TX );
 		rf_data_to_spi_data( s_data, &rf_data );
-		send_cmd_s = 2;
+		if(rf_data.pack_len > 0)
+			send_cmd_s = 2;
+		else
+			send_cmd_s = 0;
 		return;
 	}
 	
 	if( send_cmd_s == 4 )
 	{
 		spi_cmd_t *s_data = spi_malloc_buf();
-		spi_pro_init_pack_rf( s_data, RF_DATA_WITH_PRE, 0x04 );
+		spi_pro_init_pack_rf( s_data, RF_DATA_WITH_PRE, clicker_set.N_CH_TX );
 		rf_data_to_spi_data( s_data, &rf_data );
 		send_cmd_s = 5;
 		return;

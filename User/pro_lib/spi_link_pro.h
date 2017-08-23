@@ -11,9 +11,9 @@
 #define _SPI_PROTOCOL_V0200_H_
 #include "stm32f10x.h"
 
-//#define ENABLE_SPI_DATA_DEBUG
+#define ENABLE_SPI_DATA_DEBUG
 //#define ENABLE_SPI_STATUS_DEBUG
-#define ENABLE_SPI_RF_DEBUG
+//#define ENABLE_SPI_RF_DEBUG
 
 #ifdef ENABLE_SPI_DATA_DEBUG
 #define SPI_DATA_DEBUG  b_print
@@ -115,7 +115,7 @@ typedef struct
 void spi_pro_init_pack_set( spi_cmd_t *spi_scmd, spi_dev_t dev_t );
 void spi_pro_init_pack_rf( spi_cmd_t *spi_scmd, uint8_t data_t, uint8_t tx_ch );
 void    spi_pro_pack_update_crc( spi_cmd_t *spi_scmd );
-void    rf_data_to_spi_data    ( spi_cmd_t *spi_data, rf_pack_t *rf_data );
+void rf_data_to_spi_data( spi_cmd_t *spi_data, rf_pack_t *rf_pack );
 uint8_t bsp_spi_tx_data        ( spi_cmd_t *spi_scmd );
 uint8_t bsp_spi_rx_data        ( uint32_t irq, spi_cmd_t *spi_rcmd );
 uint8_t spi_cmd_ack_check( spi_cmd_ctl_t *r_cmd_ctl );

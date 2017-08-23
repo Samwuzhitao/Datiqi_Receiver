@@ -22,7 +22,7 @@
 #define	NRF_TOTAL_DATA_LEN				    (250)				// 2.4G数据总长度
 #define RF_REV_DATA_LEN               (16)        // 预留扩展的最大数据长度
 #define VERSION_MAJOR                 (2)         // 协议主版本号
-#define VERSION_MINOR                 (0)         // 协议次版本号
+#define VERSION_MINOR                 (1)         // 协议次版本号
 #define RF_DEV_ID_LEN                 (4)         // 设备ID的长度
 
 #define RF_PACK_SOF                   (0x61)
@@ -37,7 +37,7 @@
 #define SEND_1S_TIMER_START_STATUS      (SEND_1S_DATA_STATUS+1)
 #define SEND_1S_TIMER_TIMEOUT_STATUS    (SEND_1S_TIMER_START_STATUS+1)
 
-
+#define RF_CMD_ANSWER_START             (0x10)
 #define RF_CMD_CLERA_SCREEN             (0x11)
 #define RF_CMD_RAISE_HAND_ATT           (0x12)
 

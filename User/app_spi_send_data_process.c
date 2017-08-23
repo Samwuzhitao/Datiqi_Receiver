@@ -45,7 +45,6 @@ void spi_rx_data_process( void )
 			bsp_spi_rx_ack();
 			{
 				uint8_t i;
-				rssi_rf_pack_t *rssi_pack = (rssi_rf_pack_t *)(irq_rbuf[irq_rbuf_cnt_r].data);
 				SPI_RF_DEBUG("[RF]r :");
 				for(i=0;i<irq_rbuf[irq_rbuf_cnt_r].length;i++)
 				{
@@ -62,7 +61,7 @@ void spi_rx_data_process( void )
 					rssi_rf_pack_t *rssi_pack = (rssi_rf_pack_t *)(irq_rbuf[irq_rbuf_cnt_r].data);
 					spi_cmd_t      *rf_ack_data = spi_malloc_buf();
 					answer_cmd_t   *ack_cmd = (answer_cmd_t *)rf_ack.data;
-					spi_pro_init_pack_rf( rf_ack_data, RF_ACK, 0x04 );
+					spi_pro_init_pack_rf( rf_ack_data, RF_ACK, clicker_set.N_CH_TX );
 					rf_pro_init_pack( &rf_ack );
 					ack_cmd->cmd    = 0x52;
 					ack_cmd->len    = 0x05;

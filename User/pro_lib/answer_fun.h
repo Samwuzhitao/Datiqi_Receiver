@@ -77,9 +77,9 @@ typedef struct
 
 typedef struct
 {
-	uint8_t    cmd;
-	uint8_t    len;
-	hand_att_t clear_screen;
+	uint8_t cmd;
+	uint8_t len;
+	uint8_t clear_screen;
 }clear_screen_cmd_t;
 
 /* 绑定信道默认配置 **********************************************/
@@ -91,19 +91,31 @@ typedef struct
                                          .len          = 0x01,    \
                                          .clear_screen = 0x01     }
 
-extern rf_pack_t rf_data;
+#define RF_CMD_INIT_DEFAULT       {.head        = RF_PACK_SOF,    \
+                                   .end         = RF_PACK_EOF,    \
+                                   .ctl.dev_id  = DEVICE_JSQ,     \
+                                   .ctl.seq_num = 1,              \
+                                   .ctl.pac_num = 1,              \
+	                       .ctl.ver_num.bits.major = VERSION_MAJOR, \
+	                       .ctl.ver_num.bits.minor = VERSION_MINOR, \
+                                   .rev_len     = 0,              \
+                                   .pack_len    = 0               }
 
+extern rf_pack_t rf_data;
+extern hand_att_cmd_t s_hand_att_cmd;
+																	 
 void pack_init_answer( answer_cmd_t *cmd );
 void answer_pack_quenum_add( answer_cmd_t *cmd );
 
 void dtq_decode_answer( q_info_t *q_tmp, char *q_r, char * q_t );
 void dtq_encode_answer( q_info_t *q_tmp, uint8_t *sbuf, uint8_t *sbuf_len );
-void serial_cmd_answer_start( char *json_str );
+int8_t serial_cmd_answer_decode( char *json_str, answer_cmd_t *as_cmd );
 
-void rf_pack_del_answer_cmd_no_crc( void );
+void rf_pack_del_cmd_no_crc( uint8_t del_cmd );
 int8_t rf_check_has_cmd( uint8_t check_cmd, answer_cmd_t *r_cmd );
 
 int8_t rf_pack_add_answer_stop_cmd( void );
 int8_t rf_pack_add_raise_hand_att_cmd( hand_att_cmd_t *cmd );
+int8_t rf_pack_add_answer_start_cmd( answer_cmd_t *cmd );
 
 #endif
