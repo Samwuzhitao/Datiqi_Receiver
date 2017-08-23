@@ -11,9 +11,9 @@
 #define _SPI_PROTOCOL_V0200_H_
 #include "stm32f10x.h"
 
-//#define ENABLE_SPI_DATA_DEBUG
+#define ENABLE_SPI_DATA_DEBUG
 //#define ENABLE_SPI_STATUS_DEBUG
-#define ENABLE_SPI_RF_DEBUG
+//#define ENABLE_SPI_RF_DEBUG
 
 #ifdef ENABLE_SPI_DATA_DEBUG
 #define SPI_DATA_DEBUG  b_print

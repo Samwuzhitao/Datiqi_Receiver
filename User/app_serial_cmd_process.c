@@ -105,10 +105,34 @@ void uart_cmd_decode(void)
 		else if( strncmp( header, "bind_start", sizeof("bind_start")-1)== 0 )
 		{
 			uint8_t mode = 0, err = 0;
-			err = serial_cmd_wireless_bind_decode( pdata, &mode );
 			b_print("{\r\n");
 			b_print("  \"fun\": \"bind_start\",\r\n");
-			b_print("  \"result\": \"%d\"\r\n", err);
+			err = serial_cmd_wireless_bind_decode( pdata, &mode );
+			if( mode == 1 )
+			{
+				uint8_t tmp[2] = { 0, 0 };
+				srand( (system_rtc_timer.min+1) * (system_rtc_timer.sec + 1) );
+				wireless_mode1_cmd_t bind_cmd = RF_CMD_WIRELESS_BIND_MODE1_CONF;
+				memcpy( rf_bind.ctl.src_uid, revicer.uid, 4 );
+				memcpy( bind_cmd.jsq_uid, revicer.uid, 4 );
+				tmp[0] = rand()%100;
+				tmp[1] = rand()%100;
+				memcpy( bind_cmd.pin, tmp, 2 );
+				rf_bind.pack_len = 0;
+	      rf_pack_add_data( &rf_bind, (uint8_t *)(&bind_cmd), bind_cmd.len + 2 );
+				rf_pro_seq_num_add( &rf_bind );
+				rf_pro_pack_num_add( &rf_bind );
+				rf_pro_pack_update_crc( &rf_bind );
+				b_print("  \"result\": \"%d\"\r\n", *(uint16_t *)tmp);
+				rf_send_data_stop();
+				rf_send_bind_start();
+			}
+			else
+			{
+				b_print("  \"result\": \"%d\"\r\n", err );
+			}
+
+			
 			b_print("}\r\n");
 		}
 		else

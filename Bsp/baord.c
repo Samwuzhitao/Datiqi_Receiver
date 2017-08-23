@@ -14,6 +14,7 @@
 #include "sw_timer.h"
 #include "app_spi_send_data_process.h"
 #include "app_card_process.h"
+#include "bind_fun.h"
 
 /* Private variables ---------------------------------------------------------*/
 bool 						        gbf_hse_setup_fail = FALSE;		// ????????
@@ -57,6 +58,7 @@ void board_init(void)
 	rf_send_data_process_timer_init();
 	spi_timer_init();
 	card_timer_init();
+  rf_send_bind_process_timer_init();
 
 	status = mfrc500_init();
 	printf("[ INIT ] MF1702 INIT: %s !\r\n", (status == 0) ? "OK" : "FAIL");

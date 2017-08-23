@@ -34,6 +34,7 @@
 
 #include "rf_link_pro.h"
 #include "spi_link_pro.h"
+#include "bind_fun.h"
 
 #endif //_MAIN_H_
 /**

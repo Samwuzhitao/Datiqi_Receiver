@@ -33,6 +33,8 @@ int main(void)
 	{	
 		/* rf send data process */
 		rf_s_cmd_process();
+		/* rf send data process */
+		rf_bind_process();
 		/* spi send data process */
 		spi_s_cmd_process();
 		/* serial cmd processing process */

@@ -35,6 +35,12 @@ int8_t rf_send_data_start( void )
 		return -1;
 }
 
+int8_t rf_send_data_stop( void )
+{
+	send_cmd_s = 0;
+	return 0;
+}
+
 void rf_pro_pack_num_add( rf_pack_t *rf_pack )
 {
 	pac_num = (pac_num + 1) % 255;
@@ -117,12 +123,12 @@ void rf_s_cmd_process( void )
 	}
 }
 
-void r_send_2_cb( void )
+static void r_send_2_cb( void )
 {
     send_cmd_s = 4;
 }
 
-void r_send_1_cb( void )
+static void r_send_1_cb( void )
 {
     static uint8_t send_count = 0;
     send_count++;
