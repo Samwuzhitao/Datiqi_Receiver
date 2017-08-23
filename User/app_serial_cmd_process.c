@@ -173,7 +173,9 @@ void App_seirial_cmd_process(void)
 ******************************************************************************/
 static void uart_update_answers(void)
 {
-	rssi_rf_pack_t rssi_pack;
+	static rssi_rf_pack_t rssi_pack;
+	static uint8_t r_index = 0,r_is_last_data_full = 0;
+	static answer_cmd_t *answer_cmd;
 
 	if( uart_send_s == 0 )
 	{
@@ -191,16 +193,57 @@ static void uart_update_answers(void)
 					system_rtc_timer.hour, system_rtc_timer.min, system_rtc_timer.sec, 
 					system_rtc_timer.ms);
 			b_print("  \"answers\": [\r\n");
-			b_print("  ]\r\n");
-			b_print("}\r\n");
-			uart_send_s = 1;
+		  uart_send_s = 1;
+		  r_is_last_data_full = 0;
+			r_index = 0;
 		}
 		return;
 	}
 
 	if( uart_send_s == 1 )
 	{
-
+		do
+		{
+			answer_cmd = (answer_cmd_t *)(rssi_pack.rf_pack.data + r_index);
+			r_index = r_index + answer_cmd->len + 2;
+			if( answer_cmd->cmd == 0x10 )
+			{
+				uint8_t  i = 0, *prdata = answer_cmd->buf + 1;
+				q_info_t q_tmp = { 0, 0, 0 };
+				char q_t_str[2];
+		    char q_r_str[7];
+				do
+				{
+					if(r_is_last_data_full == 0)
+					{
+						q_tmp.type  = prdata[i] & 0x0F;
+						q_tmp.id    = ((prdata[i]   & 0xF0) >> 4)| 
+													((prdata[i+1] & 0x0F) << 4);
+						q_tmp.range = ((prdata[i+1] & 0xF0) >> 4)| 
+													((prdata[i+2] & 0x0F) << 4);
+						i = i + 2;
+						r_is_last_data_full = 1;
+					}
+					else
+					{
+						q_tmp.type  = (prdata[i] & 0xF0) >> 4;
+						q_tmp.id    = prdata[i+1];
+						q_tmp.range = prdata[i+2];
+						i = i + 3;
+						r_is_last_data_full = 0;
+					}
+					dtq_decode_answer( &q_tmp, q_r_str, q_t_str );
+					b_print("    {");
+					b_print("\"type\": \"%s\", ",q_t_str);
+					b_print("\"id\": \"%d\", ", q_tmp.id);
+					b_print("\"answer\": \"%s\" ",q_r_str);
+				  b_print("},\r\n");
+				}while( i < answer_cmd->len );
+				b_print("}\r\n");
+				b_print("  ]\r\n");
+				b_print("}\r\n");
+			}
+		}while( r_index < rf_data.pack_len );
 		uart_send_s = 0;
 		return;
 	}
@@ -753,7 +796,8 @@ void serial_cmd_self_inspection(const cJSON *object)
 
 void serial_cmd_answer_stop(const cJSON *object)
 {
-	uint8_t err = rf_pack_del_answer_cmd_data();
+	uint8_t err = rf_pack_add_answer_stop_cmd();
+	err =	rf_send_data_start();
 	b_print("{\r\n");
 	b_print("  \"fun\": \"answer_stop\",\r\n");
 	b_print("  \"result\": \"%d\"\r\n",err);

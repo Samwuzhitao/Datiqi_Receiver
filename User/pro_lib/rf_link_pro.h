@@ -37,6 +37,10 @@
 #define SEND_1S_TIMER_START_STATUS      (SEND_1S_DATA_STATUS+1)
 #define SEND_1S_TIMER_TIMEOUT_STATUS    (SEND_1S_TIMER_START_STATUS+1)
 
+
+#define RF_CMD_CLERA_SCREEN             (0x11)
+#define RF_CMD_RAISE_HAND_ATT           (0x12)
+
 typedef enum {
 	DEVICE_JSQ = 0x01, // 0x01:STM32
 	DEVICE_DTQ = 0x11, // 0x11:´ðÌâÆ÷

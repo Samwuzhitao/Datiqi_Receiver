@@ -281,6 +281,7 @@ void dtq_decode_answer( q_info_t * q_tmp, char *q_r, char * q_t )
 void serial_cmd_answer_start( char *json_str )
 {
     /* prase data control */
+		uint8_t  set_raise_hand_att_flg = 0;
     char     *p_end,*p_next = json_str;
     uint16_t str_len = strlen(json_str);
     uint8_t  q_num   = 0;
@@ -330,11 +331,17 @@ void serial_cmd_answer_start( char *json_str )
 										}
 										break;
 										case AS_HAND:
+										{
 												json_decode_hand( (uint8_t *)&s_hand_att_cmd, item_str );
-												break;
+												set_raise_hand_att_flg = 1;
+										}
+										break;
 										case AS_SIGN:
+										{
 												json_decode_att( (uint8_t *)&s_hand_att_cmd, item_str );
-												break;
+												set_raise_hand_att_flg = 1;
+										}
+										break;
 										default: break;
 								}
 								break;
@@ -349,8 +356,8 @@ void serial_cmd_answer_start( char *json_str )
 		}while( ( p_end - json_str ) < str_len-3 );
 		as_cmd->len = as_cmd->len + s_is_last_data_full;
 		rf_data.pack_len = as_cmd->len + 2;
-		if(s_hand_att_cmd.hand_att.byte != 0)
-			rf_pack_add_data( &rf_data, (uint8_t *)&s_hand_att_cmd, sizeof(hand_att_cmd_t));
+		if( set_raise_hand_att_flg == 1)
+			rf_pack_add_raise_hand_att_cmd( &s_hand_att_cmd );
 		err =	rf_send_data_start();
 
     b_print("{\r\n");
@@ -359,12 +366,11 @@ void serial_cmd_answer_start( char *json_str )
     b_print("}\r\n");
 }
 
-int8_t rf_pack_del_answer_cmd_data( void )
+void rf_pack_del_answer_cmd_no_crc( void )
 {
 	uint8_t r_index = 0, w_index = 0;
 	uint8_t err = 0;
 	answer_cmd_t *pcmd;
-
 	/* 剔除答题指令 */
 	do
 	{
@@ -388,30 +394,72 @@ int8_t rf_pack_del_answer_cmd_data( void )
 		}
 	}while( r_index < rf_data.pack_len );
 	rf_data.pack_len = w_index;
+}
 
-	 /* 增加清屏指令 */
+int8_t rf_check_has_cmd( uint8_t check_cmd, answer_cmd_t *r_cmd )
+{
+	uint8_t r_index = 0;
+	uint8_t err = 0, is_has_cmd = 0;
+	answer_cmd_t *pcmd;
+	/* 检查是否有举手指令，有指令直接修改指令 */
+	do
 	{
-		uint8_t is_add_new_data = 1;
-		r_index = 0;
-		clear_screen_cmd_t cear_screen_cmd = RF_CMD_CLEAR_SCREEN_DEFAULT;
-		do
-		{
-			pcmd = (answer_cmd_t *)(rf_data.data + r_index);
-			r_index = r_index + pcmd->len + 2;
-			if( pcmd->cmd == cear_screen_cmd.cmd )
-			{
-				 pcmd->buf[0] = 1;
-				is_add_new_data = 0;
-			}
-		}while( r_index < rf_data.pack_len );
-		if(is_add_new_data == 1)
-		{
-			rf_pack_add_data( &rf_data, (uint8_t *)&cear_screen_cmd, 
-			                  sizeof(clear_screen_cmd_t));
-		}
-		err =	rf_send_data_start();
-	}
+		pcmd = (answer_cmd_t *)(rf_data.data + r_index);
+		r_index = r_index + pcmd->len + 2;
 
+		if( pcmd->cmd == check_cmd )
+		{
+			r_cmd = pcmd;
+#ifdef ENABLE_ANSWER_ENCODE_DEBUG
+			{
+				uint8_t i;
+				uint8_t *pdata = (uint8_t *)pcmd;
+				b_print("[RF] RAISE_HAND_ATT:");
+				for( i =0; i < pcmd->len + 2;i++)
+					b_print(" %02x",*(pdata+i));
+				b_print("\r\n");
+			}
+#endif
+			is_has_cmd = 1;
+		}
+	}while( r_index < rf_data.pack_len );
+	
+	return is_has_cmd;
+}
+
+int8_t rf_pack_add_answer_stop_cmd( void )
+{
+	uint8_t err = 0, is_has_cmd = 0;
+	answer_cmd_t *pcmd;
+	clear_screen_cmd_t cear_screen_cmd = RF_CMD_CLEAR_SCREEN_DEFAULT;
+	/* 剔除就有的答题指令 */
+	rf_pack_del_answer_cmd_no_crc();
+	/* 检查指令是否已经在运输帧中 */
+	is_has_cmd = rf_check_has_cmd( RF_CMD_CLERA_SCREEN, pcmd );
+  /* 添加指令到运输帧 */
+	if(is_has_cmd == 1)
+		memcpy( (uint8_t *)pcmd, (uint8_t *)&cear_screen_cmd, sizeof(clear_screen_cmd_t));
+	else
+		rf_pack_add_data( &rf_data, (uint8_t *)&cear_screen_cmd, sizeof(clear_screen_cmd_t));
+	/* 更新 包号 帧号和CRC */
+	rf_pro_seq_num_add( &rf_data );
+	rf_pro_pack_num_add( &rf_data );
+	rf_pro_pack_update_crc( &rf_data );
+	return err;
+}
+
+int8_t rf_pack_add_raise_hand_att_cmd( hand_att_cmd_t *cmd )
+{
+	uint8_t err = 0, is_has_cmd = 0;
+	answer_cmd_t *pcmd;
+	/* 检查指令是否已经在运输帧中 */
+  is_has_cmd = rf_check_has_cmd( RF_CMD_RAISE_HAND_ATT, pcmd );
+	/* 添加指令到运输帧 */
+	if( is_has_cmd == 1 )
+		memcpy( (uint8_t *)pcmd, (uint8_t *)cmd, sizeof(clear_screen_cmd_t));
+	else
+		rf_pack_add_data( &rf_data, (uint8_t *)cmd, sizeof(clear_screen_cmd_t));
+	/* 更新 包号 帧号和CRC */
 	rf_pro_seq_num_add( &rf_data );
 	rf_pro_pack_num_add( &rf_data );
 	rf_pro_pack_update_crc( &rf_data );

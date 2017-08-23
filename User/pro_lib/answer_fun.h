@@ -95,9 +95,15 @@ extern rf_pack_t rf_data;
 
 void pack_init_answer( answer_cmd_t *cmd );
 void answer_pack_quenum_add( answer_cmd_t *cmd );
-int8_t rf_pack_del_answer_cmd_data( void );
 
 void dtq_decode_answer( q_info_t *q_tmp, char *q_r, char * q_t );
 void dtq_encode_answer( q_info_t *q_tmp, uint8_t *sbuf, uint8_t *sbuf_len );
 void serial_cmd_answer_start( char *json_str );
+
+void rf_pack_del_answer_cmd_no_crc( void );
+int8_t rf_check_has_cmd( uint8_t check_cmd, answer_cmd_t *r_cmd );
+
+int8_t rf_pack_add_answer_stop_cmd( void );
+int8_t rf_pack_add_raise_hand_att_cmd( hand_att_cmd_t *cmd );
+
 #endif
