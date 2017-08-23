@@ -39,7 +39,7 @@ void spi_rx_data_process( void )
 		if((irq_rbuf[irq_rbuf_cnt_r].cmd == 0x22) && 
 		(irq_rbuf[irq_rbuf_cnt_r].dev_t == DEVICE_RX))
 		{
-			static uint8_t pack_num = 0,seq_num = 0;
+			static uint8_t pack_num = 0;
 			/* SPI 主动提交的数据 */
 			/* 返回 SPI ACK */
 			bsp_spi_rx_ack();
@@ -52,8 +52,6 @@ void spi_rx_data_process( void )
 					SPI_RF_DEBUG(" %02x",irq_rbuf[irq_rbuf_cnt_r].data[i]);
 				}
 				SPI_RF_DEBUG("\r\n");
-				SPI_RF_DEBUG("[RF] DATA: seq_num:%02x pac_num:%02x \r\n",rssi_pack->rf_pack.ctl.seq_num,
-						rssi_pack->rf_pack.ctl.pac_num );
 			}
 			/* 将数据送入应用层处理 */
 			{
@@ -69,18 +67,15 @@ void spi_rx_data_process( void )
 					ack_cmd->cmd    = 0x52;
 					ack_cmd->len    = 0x05;
 					ack_cmd->buf[0] = 0x01;
-					memcpy( ack_cmd->buf+1, rssi_pack->rf_pack.ctl.dst_uid, 4);
+					memcpy( ack_cmd->buf+1, rssi_pack->rf_pack.ctl.src_uid, 4);
 					rf_ack.pack_len = ack_cmd->len + 2;
 					rf_data_to_spi_data( rf_ack_data, &rf_ack );
-					if(( pack_num != rssi_pack->rf_pack.ctl.pac_num ) &&
-						 ( seq_num  != rssi_pack->rf_pack.ctl.seq_num ))
+					if(( pack_num != rssi_pack->rf_pack.ctl.pac_num ))
 					{
 						pack_num = rssi_pack->rf_pack.ctl.pac_num;
-						seq_num  = rssi_pack->rf_pack.ctl.seq_num;
 						rf_write_data_to_buffer( SPI_RBUF, irq_rbuf[irq_rbuf_cnt_r].data,
 							irq_rbuf[irq_rbuf_cnt_r].length );
 					}
-				
 				}
 			}
 		}

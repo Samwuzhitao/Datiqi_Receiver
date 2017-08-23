@@ -47,8 +47,8 @@ typedef union {
 	uint8_t byte;
 	struct
 	{
-		uint8_t major:4;   /*!< bit:  0..3  MAJOR VERSION */
-		uint8_t minor:4;   /*!< bit:  4..7  MINOR VERSION */
+		uint8_t minor:4;   /*!< bit:  0..3  MINOR VERSION */
+		uint8_t major:4;   /*!< bit:  4..7  MAJOR VERSION */
 	}bits;
 }ver_num_t;
 
