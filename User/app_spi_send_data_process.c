@@ -45,23 +45,27 @@ void spi_rx_data_process( void )
 			bsp_spi_rx_ack();
 			{
 				uint8_t i;
-				SPI_RF_DEBUG("[RF]r :");
-				for(i=0;i<irq_rbuf[irq_rbuf_cnt_r].length;i++)
+				rssi_rf_pack_t *rssi_pack = (rssi_rf_pack_t *)(irq_rbuf[irq_rbuf_cnt_r].data);
+				answer_cmd_t *answer_cmd  = (answer_cmd_t *)(irq_rbuf[irq_rbuf_cnt_r].data + \
+     				+ sizeof(rf_pack_ctl_t) + rssi_pack->rf_pack.rev_len + 4 );
+				if( answer_cmd->cmd == RF_CMD_ANSWER_START )
 				{
-					SPI_RF_DEBUG(" %02x",irq_rbuf[irq_rbuf_cnt_r].data[i]);
+					SPI_RF_DEBUG("[RF]r :");
+					for(i=0;i<irq_rbuf[irq_rbuf_cnt_r].length;i++)
+					{
+						SPI_RF_DEBUG(" %02x",irq_rbuf[irq_rbuf_cnt_r].data[i]);
+					}
+					SPI_RF_DEBUG("\r\n");
 				}
-				SPI_RF_DEBUG("\r\n");
-			}
-			/* 将数据送入应用层处理 */
-			{
-				if( BUF_FULL != buffer_get_buffer_status(SPI_RBUF) )
+		    /* 将数据送入应用层处理 */
+				if(( BUF_FULL != buffer_get_buffer_status(SPI_RBUF) ) && 
+					 ( answer_cmd->cmd == RF_CMD_ANSWER_START ))
 				{ 
 					/* 返回 RF ACK */
 					rf_pack_t      rf_ack;
-					rssi_rf_pack_t *rssi_pack = (rssi_rf_pack_t *)(irq_rbuf[irq_rbuf_cnt_r].data);
 					spi_cmd_t      *rf_ack_data = spi_malloc_buf();
 					answer_cmd_t   *ack_cmd = (answer_cmd_t *)rf_ack.data;
-					spi_pro_init_pack_rf( rf_ack_data, RF_ACK, clicker_set.N_CH_TX );
+					spi_pro_init_pack_rf( rf_ack_data, RF_ACK, clicker_set.N_CH_RX );
 					rf_pro_init_pack( &rf_ack );
 					ack_cmd->cmd    = 0x52;
 					ack_cmd->len    = 0x05;
@@ -69,6 +73,7 @@ void spi_rx_data_process( void )
 					memcpy( ack_cmd->buf+1, rssi_pack->rf_pack.ctl.src_uid, 4);
 					rf_ack.pack_len = ack_cmd->len + 2;
 					rf_data_to_spi_data( rf_ack_data, &rf_ack );
+					
 					if(( pack_num != rssi_pack->rf_pack.ctl.pac_num ))
 					{
 						pack_num = rssi_pack->rf_pack.ctl.pac_num;

@@ -196,19 +196,24 @@ static void uart_update_answers(void)
 			return;
 		else
 		{
-			rf_read_data_from_buffer( SPI_RBUF, &rssi_pack );	
-			b_print("{\r\n");
-			b_print("  \"fun\": \"update_answer_list\",\r\n");
-			b_print("  \"card_id\": \"%08x\",\r\n", *(uint32_t *)(rssi_pack.rf_pack.ctl.src_uid) );
-			b_print("  \"rssi\": \"-%d\",\r\n", rssi_pack.rssi );
-			b_print("  \"update_time\": \"%04d-%02d-%02d %02d:%02d:%02d:%03d\",\r\n",
-					system_rtc_timer.year, system_rtc_timer.mon, system_rtc_timer.date, 
-					system_rtc_timer.hour, system_rtc_timer.min, system_rtc_timer.sec, 
-					system_rtc_timer.ms);
-			b_print("  \"answers\": [\r\n");
-		  uart_send_s = 1;
-		  r_is_last_data_full = 0;
-			r_index = 0;
+			rf_read_data_from_buffer( SPI_RBUF, &rssi_pack );
+			answer_cmd = (answer_cmd_t *)(rssi_pack.rf_pack.data + r_index);
+			r_index = r_index + answer_cmd->len + 2;
+			if( answer_cmd->cmd == RF_CMD_ANSWER_START )
+			{
+				b_print("{\r\n");
+				b_print("  \"fun\": \"update_answer_list\",\r\n");
+				b_print("  \"card_id\": \"%08x\",\r\n", *(uint32_t *)(rssi_pack.rf_pack.ctl.src_uid) );
+				b_print("  \"rssi\": \"-%d\",\r\n", rssi_pack.rssi );
+				b_print("  \"update_time\": \"%04d-%02d-%02d %02d:%02d:%02d:%03d\",\r\n",
+						system_rtc_timer.year, system_rtc_timer.mon, system_rtc_timer.date, 
+						system_rtc_timer.hour, system_rtc_timer.min, system_rtc_timer.sec, 
+						system_rtc_timer.ms);
+				b_print("  \"answers\": [\r\n");
+				uart_send_s = 1;
+				r_is_last_data_full = 0;
+				r_index = 0;
+			}
 		}
 		return;
 	}
@@ -219,7 +224,7 @@ static void uart_update_answers(void)
 		{
 			answer_cmd = (answer_cmd_t *)(rssi_pack.rf_pack.data + r_index);
 			r_index = r_index + answer_cmd->len + 2;
-			if( answer_cmd->cmd == 0x10 )
+			if( answer_cmd->cmd == RF_CMD_ANSWER_START )
 			{
 				uint8_t  i = 0, *prdata = answer_cmd->buf + 1;
 				char q_t_str[2];
@@ -264,6 +269,8 @@ static void uart_update_answers(void)
 			}
 		}while( r_index < rf_data.pack_len );
 		uart_send_s = 0;
+		r_index = 0;
+		r_is_last_data_full = 0;
 		return;
 	}
 }
@@ -273,7 +280,6 @@ void serial_cmd_clear_uid_list(const cJSON *object)
 	uint8_t err = initialize_white_list();
 	EE_WriteVariable(CPU_ADDR_CLONE_FLAG,0);
 	get_mcu_uid();
-
 	b_print("{\r\n");
 	b_print("  \"fun\": \"clear_wl\",\r\n");
 	b_print("  \"result\": \"%d\"\r\n",(err==OPERATION_SUCCESS)?0:-1);
@@ -397,8 +403,8 @@ void serial_cmd_set_channel(const cJSON *object)
 		/* 设置接收的信道 */
 		clicker_set.N_CH_TX = t_conf.t_buf[RF_ADDR_CH];
 		clicker_set.N_CH_RX = r_conf.t_buf[RF_ADDR_CH];
-		status |= spi_write_cmd_to_rx( r_conf.t_buf, r_conf.len );
-		status |= spi_write_cmd_to_tx( t_conf.t_buf, t_conf.len );
+		status |= spi_write_cmd_to_rx( t_conf.t_buf, t_conf.len );
+		status |= spi_write_cmd_to_tx( r_conf.t_buf, r_conf.len );
 	}
 	else
 		status = -1;

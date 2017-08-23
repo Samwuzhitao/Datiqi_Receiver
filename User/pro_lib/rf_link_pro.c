@@ -98,7 +98,7 @@ void rf_s_cmd_process( void )
 	if( send_cmd_s == 1 )
 	{
 		spi_cmd_t *s_data = spi_malloc_buf();
-		spi_pro_init_pack_rf( s_data, RF_DATA_WITH_PRE, clicker_set.N_CH_TX );
+		spi_pro_init_pack_rf( s_data, RF_DATA_WITH_PRE, clicker_set.N_CH_RX );
 		rf_data_to_spi_data( s_data, &rf_data );
 		if(rf_data.pack_len > 0)
 			send_cmd_s = 2;
@@ -110,7 +110,7 @@ void rf_s_cmd_process( void )
 	if( send_cmd_s == 4 )
 	{
 		spi_cmd_t *s_data = spi_malloc_buf();
-		spi_pro_init_pack_rf( s_data, RF_DATA_WITH_PRE, clicker_set.N_CH_TX );
+		spi_pro_init_pack_rf( s_data, RF_DATA_WITH_PRE, clicker_set.N_CH_RX );
 		rf_data_to_spi_data( s_data, &rf_data );
 		send_cmd_s = 5;
 		return;

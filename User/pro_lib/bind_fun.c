@@ -39,7 +39,7 @@ int8_t serial_cmd_wireless_bind_decode( char *json_str, uint8_t *mode )
   /* prase data control */
   char     *p_end,*p_next = json_str;
   uint16_t str_len = strlen(json_str);
-  int8_t   err;
+  int8_t   err = 0;
 
 	do
 	{
