@@ -13,7 +13,7 @@
   Return:
   Others:None
 ******************************************************************************/
-void b_print(const char *fmt, ...)                                       
+void b_print(const char *fmt, ...)
 {
 	uint8_t r_index = 0;
 	char str[256];
@@ -26,10 +26,10 @@ void b_print(const char *fmt, ...)
 	va_end(args);
 
 	/* JSON 剔除格式化输出字符 */
-	
+
 #ifdef FILTER_NOUSE_CHAR
 	{
-		static uint8_t skip_flg = 0x00; 
+		static uint8_t skip_flg = 0x00;
 	  char *pdata = str;
 
 		while( *pdata != '\0' )
@@ -59,4 +59,19 @@ void b_print(const char *fmt, ...)
 	r_index = strlen(str);
 #endif
 	print_write_data_to_buffer( str, r_index );
+}
+
+uint8_t  b_strncmp( uint8_t *data1, uint8_t *data2, uint8_t n )
+{
+	uint8_t not_same = 0, i = 0;
+	uint8_t *pdata1 = data1, *pdata2 = data2;
+
+	for( i=0; i<n; i++ )
+	{
+		not_same = (*pdata1 == *pdata2)?0:1;
+		pdata1++;
+		pdata2++;
+	}
+
+	return not_same;
 }
