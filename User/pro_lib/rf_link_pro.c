@@ -15,7 +15,6 @@
 
 extern revicer_typedef revicer;
 Timer_typedef  spi_send_2_timer,spi_send_1_timer;
-static uint8_t seq_num = 1, pac_num = 1;
 static uint8_t send_cmd_s = 0;
 	
 int8_t rf_send_data_start( void )
@@ -43,16 +42,16 @@ int8_t rf_send_data_stop( void )
 
 void rf_pro_pack_num_add( rf_pack_t *rf_pack )
 {
-	pac_num = (pac_num + 1) % 255;
-	if( pac_num == 0 )
-		pac_num = 1;
+	rf_pack->ctl.pac_num = (rf_pack->ctl.pac_num + 1) % 255;
+	if( rf_pack->ctl.pac_num == 0 )
+		rf_pack->ctl.pac_num = 1;
 }
 
 void rf_pro_seq_num_add( rf_pack_t *rf_pack )
 {
-	seq_num = (seq_num + 1) % 255;
-	if( seq_num == 0 )
-		seq_num = 1;
+	rf_pack->ctl.seq_num = (rf_pack->ctl.seq_num + 1) % 255;
+	if( rf_pack->ctl.seq_num == 0 )
+		rf_pack->ctl.seq_num = 1;
 }
 
 static int8_t rf_pro_set_version( rf_pack_t *rf_pack, uint8_t major, uint8_t minor )
@@ -72,8 +71,6 @@ void rf_pro_init_pack( rf_pack_t *rf_pack )
 	rf_pack->head        = RF_PACK_SOF;
 	rf_pack->end         = RF_PACK_EOF;
 	rf_pack->ctl.dev_id  = DEVICE_JSQ;
-	rf_pack->ctl.seq_num = seq_num;
-	rf_pack->ctl.pac_num = pac_num;
 	rf_pack->rev_len     = 0;
 	rf_pack->pack_len    = 0;
 	rf_pro_seq_num_add( rf_pack );

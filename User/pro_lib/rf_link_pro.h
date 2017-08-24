@@ -40,6 +40,7 @@
 #define RF_CMD_ANSWER_START             (0x10)
 #define RF_CMD_CLERA_SCREEN             (0x11)
 #define RF_CMD_RAISE_HAND_ATT           (0x12)
+#define RF_CMD_BIND_START               (0x40)
 
 typedef enum {
 	DEVICE_JSQ = 0x01, // 0x01:STM32

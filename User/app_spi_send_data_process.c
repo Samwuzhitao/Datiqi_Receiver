@@ -48,7 +48,8 @@ void spi_rx_data_process( void )
 				rssi_rf_pack_t *rssi_pack = (rssi_rf_pack_t *)(irq_rbuf[irq_rbuf_cnt_r].data);
 				answer_cmd_t *answer_cmd  = (answer_cmd_t *)(irq_rbuf[irq_rbuf_cnt_r].data + \
      				+ sizeof(rf_pack_ctl_t) + rssi_pack->rf_pack.rev_len + 4 );
-				if( answer_cmd->cmd == RF_CMD_ANSWER_START )
+				if(( answer_cmd->cmd == RF_CMD_ANSWER_START ) || 
+					 ( answer_cmd->cmd == RF_CMD_BIND_START))
 				{
 					SPI_RF_DEBUG("[RF]r :");
 					for(i=0;i<irq_rbuf[irq_rbuf_cnt_r].length;i++)
@@ -58,23 +59,37 @@ void spi_rx_data_process( void )
 					SPI_RF_DEBUG("\r\n");
 				}
 		    /* 将数据送入应用层处理 */
-				if(( BUF_FULL != buffer_get_buffer_status(SPI_RBUF) ) && 
-					 ( answer_cmd->cmd == RF_CMD_ANSWER_START ))
-				{ 
-					/* 返回 RF ACK */
-					rf_pack_t      rf_ack;
-					spi_cmd_t      *rf_ack_data = spi_malloc_buf();
-					answer_cmd_t   *ack_cmd = (answer_cmd_t *)rf_ack.data;
-					spi_pro_init_pack_rf( rf_ack_data, RF_ACK, clicker_set.N_CH_RX );
-					rf_pro_init_pack( &rf_ack );
-					ack_cmd->cmd    = 0x52;
-					ack_cmd->len    = 0x05;
-					ack_cmd->buf[0] = 0x01;
-					memcpy( ack_cmd->buf+1, rssi_pack->rf_pack.ctl.src_uid, 4);
-					rf_ack.pack_len = ack_cmd->len + 2;
-					rf_data_to_spi_data( rf_ack_data, &rf_ack );
-					
-					if(( pack_num != rssi_pack->rf_pack.ctl.pac_num ))
+				if( BUF_FULL != buffer_get_buffer_status(SPI_RBUF) ) 
+				{	 
+					uint8_t write_buf_flg = 0;
+					switch( answer_cmd->cmd )
+					{
+						case RF_CMD_ANSWER_START:
+						{ 
+							/* 返回 RF ACK */
+							rf_pack_t      rf_ack;
+							spi_cmd_t      *rf_ack_data = spi_malloc_buf();
+							answer_cmd_t   *ack_cmd = (answer_cmd_t *)rf_ack.data;
+							spi_pro_init_pack_rf( rf_ack_data, RF_ACK, clicker_set.N_CH_RX );
+							rf_pro_init_pack( &rf_ack );
+							ack_cmd->cmd    = 0x52;
+							ack_cmd->len    = 0x05;
+							ack_cmd->buf[0] = 0x01;
+							memcpy( ack_cmd->buf+1, rssi_pack->rf_pack.ctl.src_uid, 4);
+							rf_ack.pack_len = ack_cmd->len + 2;
+							rf_data_to_spi_data( rf_ack_data, &rf_ack );
+							if( pack_num != rssi_pack->rf_pack.ctl.pac_num )
+								write_buf_flg = 1;
+						}
+						break;
+						case RF_CMD_BIND_START:
+							write_buf_flg = 1;
+						break;
+						
+						default: break;
+					}
+
+					if( write_buf_flg == 1 )
 					{
 						pack_num = rssi_pack->rf_pack.ctl.pac_num;
 						rf_write_data_to_buffer( SPI_RBUF, irq_rbuf[irq_rbuf_cnt_r].data,

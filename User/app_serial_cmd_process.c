@@ -35,6 +35,7 @@ static uint8_t rjson_index = 0;
 static uint8_t uart_send_s = 0;
 uint8_t dtq_self_inspection_flg = 0;
 //uint8_t logic_pac_add = 0;
+uint8_t bind_pin[2] = { 0, 0 };
 
 extern wl_typedef       wl;
 extern revicer_typedef  revicer;
@@ -110,20 +111,21 @@ void uart_cmd_decode(void)
 			err = serial_cmd_wireless_bind_decode( pdata, &mode );
 			if( mode == 1 )
 			{
-				uint8_t tmp[2] = { 0, 0 };
 				srand( (system_rtc_timer.min+1) * (system_rtc_timer.sec + 1) );
 				wireless_mode1_cmd_t bind_cmd = RF_CMD_WIRELESS_BIND_MODE1_CONF;
 				memcpy( rf_bind.ctl.src_uid, revicer.uid, 4 );
 				memcpy( bind_cmd.jsq_uid, revicer.uid, 4 );
-				tmp[0] = rand()%100;
-				tmp[1] = rand()%100;
-				memcpy( bind_cmd.pin, tmp, 2 );
+				bind_pin[0] = rand()%100;
+				bind_pin[0] = (((bind_pin[0] / 10) & 0x0F) << 4) | ((bind_pin[0] % 10) & 0x0F);
+				bind_pin[1] = rand()%100;
+				bind_pin[1] = (((bind_pin[1] / 10) & 0x0F) << 4) | ((bind_pin[1] % 10) & 0x0F);
+				memcpy( bind_cmd.pin, bind_pin, 2 );
 				rf_bind.pack_len = 0;
 	      rf_pack_add_data( &rf_bind, (uint8_t *)(&bind_cmd), bind_cmd.len + 2 );
 				rf_pro_seq_num_add( &rf_bind );
 				rf_pro_pack_num_add( &rf_bind );
 				rf_pro_pack_update_crc( &rf_bind );
-				b_print("  \"result\": \"%d\"\r\n", *(uint16_t *)tmp);
+				b_print("  \"result\": \"%02x%02x\"\r\n", bind_pin[0], bind_pin[1] );
 				rf_send_data_stop();
 				rf_send_bind_start();
 			}
@@ -222,22 +224,47 @@ static void uart_update_answers(void)
 		{
 			rf_read_data_from_buffer( SPI_RBUF, &rssi_pack );
 			answer_cmd = (answer_cmd_t *)(rssi_pack.rf_pack.data + r_index);
-			r_index = r_index + answer_cmd->len + 2;
-			if( answer_cmd->cmd == RF_CMD_ANSWER_START )
+			switch( answer_cmd->cmd )
 			{
-				b_print("{\r\n");
-				b_print("  \"fun\": \"update_answer_list\",\r\n");
-				b_print("  \"card_id\": \"%08x\",\r\n", *(uint32_t *)(rssi_pack.rf_pack.ctl.src_uid) );
-				b_print("  \"rssi\": \"-%d\",\r\n", rssi_pack.rssi );
-				b_print("  \"update_time\": \"%04d-%02d-%02d %02d:%02d:%02d:%03d\",\r\n",
-						system_rtc_timer.year, system_rtc_timer.mon, system_rtc_timer.date, 
-						system_rtc_timer.hour, system_rtc_timer.min, system_rtc_timer.sec, 
-						system_rtc_timer.ms);
-				b_print("  \"answers\": [\r\n");
-				uart_send_s = 1;
-				r_is_last_data_full = 0;
-				r_index = 0;
+				case RF_CMD_ANSWER_START:
+				{
+					b_print("{\r\n");
+					b_print("  \"fun\": \"update_answer_list\",\r\n");
+					b_print("  \"card_id\": \"%08x\",\r\n", *(uint32_t *)(rssi_pack.rf_pack.ctl.src_uid) );
+					b_print("  \"rssi\": \"-%d\",\r\n", rssi_pack.rssi );
+					b_print("  \"update_time\": \"%04d-%02d-%02d %02d:%02d:%02d:%03d\",\r\n",
+							system_rtc_timer.year, system_rtc_timer.mon, system_rtc_timer.date, 
+							system_rtc_timer.hour, system_rtc_timer.min, system_rtc_timer.sec, 
+							system_rtc_timer.ms);
+					b_print("  \"answers\": [\r\n");
+					uart_send_s = 1;
+					r_is_last_data_full = 0;
+					r_index = 0;
+				}
+				break;
+				
+				case RF_CMD_BIND_START:
+				{
+					static uint8_t pack_num = 0;
+					wireless_mode1_cmd_t *cmd = (wireless_mode1_cmd_t *)answer_cmd;
+					if(( b_strncmp( cmd->jsq_uid, revicer.uid, 4 ) == 0 ) &&
+						 ( b_strncmp( cmd->pin,     bind_pin,    2 ) == 0 ))
+					{
+						bind_send_ack( answer_cmd );
+						if( pack_num != rssi_pack.rf_pack.ctl.pac_num )
+						{
+							bind_wireless_upos_add();
+							pack_num = rssi_pack.rf_pack.ctl.pac_num;
+							uint8_t *daq_uid = (uint8_t *)((uint8_t *)answer_cmd + sizeof(wireless_mode1_cmd_t));
+							b_print("  \"fun\": \"update_bind_print\",\r\n");
+							b_print("  \"card_id\": \"%02x%02x%02x%02x\",\r\n",
+								 daq_uid[0],daq_uid[1],daq_uid[2],daq_uid[3]);
+						}
+					}
+				}
+				default: break;
 			}
+			
 		}
 		return;
 	}
