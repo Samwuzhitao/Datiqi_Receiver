@@ -12,10 +12,11 @@
 #include "main.h"
 #include "stdlib.h"
 #include "board.h"
+#include "app_serial_cmd_process.h"
+#include "app_send_data_process.h"
+#include "app_show_message_process.h"
 #include "app_card_process.h"
-
-extern void app_handle_layer(void);
-
+#include "app_spi_send_data_process.h"
 /******************************************************************************
   Function:main
   Description:
@@ -34,7 +35,10 @@ int main(void)
 
 	while(1)
 	{	
-		app_handle_layer();
+		/* serial cmd processing process */
+		App_seirial_cmd_process();
 
+		/* MI Card processing process */
+		App_card_process();
 	}	
 }
